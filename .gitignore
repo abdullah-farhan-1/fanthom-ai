@@ -42,3 +42,9 @@ next-env.d.ts
 
 # keep the template
 !.env.example
+
+# sample audio (large, regenerate with scripts/generate-sample-audio.mts)
+samples/*.wav
+samples/*.mp3
+samples/*.m4a
+samples/*.webm

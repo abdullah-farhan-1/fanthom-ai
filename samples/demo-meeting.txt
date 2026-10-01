@@ -1,0 +1,35 @@
+Sara: Hey, can you hear me okay? My internet's been weird all morning.
+Daniyal: Yeah, you're fine. Did you watch the match last night?
+Sara: I caught the last few overs. That final catch was ridiculous.
+Daniyal: I know, I nearly fell off the sofa. Anyway, Bilal can't make it today, he's at the dentist, so it's just us.
+Sara: Okay, no problem. So this is the weekly sync for Shared Lists. Main things today are the beta date, the invite flow, and what we cut from version one.
+Daniyal: Sounds good.
+Sara: Let's start with the beta date. Where are we on the sync bug?
+Daniyal: So, the bug where two people edit the same list and one change disappears. I've found the cause, it's a race condition when both phones reconnect at the same time. I can have the fix in by this Friday.
+Sara: Great. Then let's say the beta goes out Monday the twelfth.
+Daniyal: Hmm, Monday is tight. If the fix lands Friday, I'd want QA to have a couple of days with it.
+Sara: Fair. Okay, let's not do Monday. Let's make it Wednesday the fourteenth of October for the beta.
+Daniyal: Wednesday the fourteenth works.
+Sara: Decided then. Beta on Wednesday the fourteenth. Next, the invite flow. We had two options. Option A was inviting people by email, option B was a shareable link.
+Daniyal: I'd push for option B, the link. Email means we need a mail provider, bounce handling, all of that. A link is a day of work.
+Sara: Agreed. Let's go with option B, invite by link. We can add email later if people ask for it.
+Daniyal: Perfect.
+Sara: And Bilal needs to update the onboarding screens for the link flow. I'll tell him, but I'll put it down as his. Bilal to finish the onboarding screens by Monday the twelfth.
+Daniyal: Makes sense. He already has most of the designs.
+Sara: Okay, last topic, what we cut. Dark mode. I love it, but I don't think it's going in version one.
+Daniyal: Honestly, yeah. It touches every screen. Let's leave it out.
+Sara: Okay, dark mode is out of version one. We'll revisit after the beta.
+Daniyal: Oh, and someone should probably look into pricing at some point. We haven't really talked about whether this is free or paid.
+Sara: True. Let's park that for now.
+Daniyal: We could maybe do a referral thing too, like invite three friends and get something.
+Sara: Maybe, but let's not commit to that. It's just an idea for now.
+Daniyal: Sure.
+Sara: Okay, a few more action items. I'll write the release notes for the beta, I'll have them done by next Tuesday.
+Daniyal: And I'll set up crash reporting before the beta goes out.
+Sara: Great. Oh, and the app store screenshots. Daniyal, can you take those?
+Daniyal: I can, but I'm pretty full with the sync fix.
+Sara: You know what, never mind, I'll do the screenshots myself. I'll get them done by Friday next week.
+Daniyal: Thanks, that helps a lot.
+Sara: Okay, let me recap. Beta on Wednesday the fourteenth. Invite by link, option B. Dark mode is out of version one. Daniyal fixes the sync bug by this Friday and sets up crash reporting. Bilal finishes onboarding screens by Monday. I'm doing release notes by Tuesday and screenshots by next Friday.
+Daniyal: That's everything. Talk next week.
+Sara: Bye!
