@@ -3,7 +3,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 const TTS_MODEL = process.env.GEMINI_TTS_MODEL ?? "gemini-3.8-flash-tts";
-const VOICES: Record<string, string> = { Sara: "Kore", Daniyal: "Charon" };
+// Voice per speaker name. Multi-speaker TTS takes at most two speakers per script.
+const VOICE_TABLE: Record<string, string> = { Sara: "Kore", Daniyal: "Charon", Hina: "Aoede", Omar: "Puck" };
 const LINES_PER_CHUNK = 10;
 const GAP_SECONDS = 0.4;
 
@@ -12,8 +13,11 @@ if (!input) throw new Error("usage: generate-sample-audio.mts <script.txt>");
 const output = input.replace(/\.txt$/, ".wav");
 
 const lines = readFileSync(input, "utf8").split("\n").map((l) => l.trim()).filter(Boolean);
-const unknown = [...new Set(lines.map((l) => l.split(":")[0]))].filter((s) => !VOICES[s]);
+const speakers = [...new Set(lines.map((l) => l.split(":")[0]))];
+const unknown = speakers.filter((s) => !VOICE_TABLE[s]);
 if (unknown.length) throw new Error(`no voice configured for: ${unknown.join(", ")}`);
+if (speakers.length > 2) throw new Error(`multi-speaker TTS supports 2 speakers, script has: ${speakers.join(", ")}`);
+const VOICES = Object.fromEntries(speakers.map((s) => [s, VOICE_TABLE[s]]));
 
 async function synthesize(chunk: string[]): Promise<{ pcm: Buffer; rate: number }> {
   const body = {
