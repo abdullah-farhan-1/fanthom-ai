@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { FileAudio, Plus, Upload } from "lucide-react";
+import { FileAudio, Plus, Upload, X } from "lucide-react";
 import { BrandSpinner, UploadMeter } from "@/components/signal-loader";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,17 @@ const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Supabase free-plan per-file limit
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+class Cancelled extends Error {}
+
 // PUT straight to the signed Supabase URL so large recordings never touch our server, with progress.
-function uploadWithProgress(url: string, file: File, onProgress: (pct: number) => void) {
+// Aborting the signal stops the transfer; an aborted upload leaves no file in storage.
+function uploadWithProgress(url: string, file: File, onProgress: (pct: number) => void, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    signal.addEventListener("abort", () => {
+      xhr.abort();
+      reject(new Cancelled());
+    });
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
@@ -29,8 +36,10 @@ function uploadWithProgress(url: string, file: File, onProgress: (pct: number) =
   });
 }
 
-async function postJson(path: string, body: unknown) {
-  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function postJson(path: string, body: unknown, signal?: AbortSignal) {
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal }).catch((err) => {
+    throw signal?.aborted ? new Cancelled() : err;
+  });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.error ?? `Request failed (${res.status})`);
   return json;
@@ -47,6 +56,13 @@ export function NewMeetingDialog() {
   const [busy, setBusy] = useState<string | null>(null);
   const [pct, setPct] = useState<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const controller = useRef<AbortController | null>(null);
+  // Cancellable until the meeting is created; after that, processing has already started on the server.
+  const cancellable = busy === "Preparing upload" || busy === "Uploading";
+
+  function cancel() {
+    controller.current?.abort();
+  }
 
   function reset() {
     setTitle("");
@@ -67,11 +83,14 @@ export function NewMeetingDialog() {
         if (file.size > MAX_UPLOAD_BYTES) {
           throw new Error(`This file is ${(file.size / 1e6).toFixed(0)} MB. The demo storage accepts up to 50 MB; compress it (e.g. to MP3) or paste the transcript instead.`);
         }
+        controller.current = new AbortController();
+        const { signal } = controller.current;
         setBusy("Preparing upload");
-        const { path, url } = await postJson("/api/uploads", { filename: file.name, size: file.size });
+        const { path, url } = await postJson("/api/uploads", { filename: file.name, size: file.size }, signal);
+        if (signal.aborted) throw new Cancelled();
         setBusy("Uploading");
         setPct(0);
-        await uploadWithProgress(url, file, setPct);
+        await uploadWithProgress(url, file, setPct, signal);
         setPct(null);
         body = { source: file.type.startsWith("video") ? "video" : "audio", media_path: path, title: name, meeting_date: date };
       } else {
@@ -83,14 +102,25 @@ export function NewMeetingDialog() {
       reset();
       router.push(`/meetings/${id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      if (err instanceof Cancelled) toast("Upload cancelled", { description: file?.name });
+      else toast.error(err instanceof Error ? err.message : "Something went wrong");
       setBusy(null);
       setPct(null);
+    } finally {
+      controller.current = null;
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !busy && setOpen(o)}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        // Closing (X / Esc / outside click) during an upload cancels it; once processing has started it can't close mid-request.
+        if (!o && busy && !cancellable) return;
+        if (!o && cancellable) cancel();
+        setOpen(o);
+      }}
+    >
       <DialogTrigger render={<Button className="bg-brand text-brand-foreground hover:bg-brand/90" />}>
         <Plus /> <span className="hidden sm:inline">New meeting</span>
       </DialogTrigger>
@@ -151,15 +181,22 @@ export function NewMeetingDialog() {
           </div>
           <p className="text-xs text-muted-foreground">The date is used to work out deadlines like “next Friday”.</p>
           {busy && <UploadMeter pct={pct} label={busy} />}
-          <Button type="submit" className="w-full" disabled={!!busy || (tab === "upload" ? !file : transcript.trim().length < 10)}>
-            {busy ? (
-              <>
-                <BrandSpinner /> {busy}
-              </>
-            ) : (
-              "Create notes"
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1" disabled={!!busy || (tab === "upload" ? !file : transcript.trim().length < 10)}>
+              {busy ? (
+                <>
+                  <BrandSpinner /> {busy}
+                </>
+              ) : (
+                "Create notes"
+              )}
+            </Button>
+            {cancellable && (
+              <Button type="button" variant="outline" onClick={cancel}>
+                <X /> Cancel upload
+              </Button>
             )}
-          </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
