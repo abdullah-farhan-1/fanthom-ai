@@ -9,6 +9,8 @@ import { SpeakersRow } from "./speakers-row";
 import { Chapters } from "./chapters";
 import { Timeline } from "./timeline";
 import { LikeButton } from "@/components/like-button";
+import { DeleteMeetingButton } from "@/components/delete-meeting-button";
+import { useRouter } from "next/navigation";
 
 export interface SpeakerInfo {
   label: string;
@@ -35,6 +37,7 @@ export function segmentAt(starts: number[], t: number) {
 const RATES = [1, 1.25, 1.5, 2];
 
 export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }: MeetingDetail & { startAt: number | null }) {
+  const router = useRouter();
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const [time, setTime] = useState(startAt ?? 0);
   const [playing, setPlaying] = useState(false);
@@ -124,7 +127,18 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
         </p>
         <div className="mt-2 flex items-start justify-between gap-4">
           <h1 className="font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>
-          <LikeButton meetingId={meeting.id} initial={Boolean(meeting.liked)} className="mt-1 size-9" />
+          <div className="mt-1 flex shrink-0 gap-2">
+            <LikeButton meetingId={meeting.id} initial={Boolean(meeting.liked)} className="size-9" />
+            <DeleteMeetingButton
+              meetingId={meeting.id}
+              title={meeting.title}
+              className="size-9"
+              onDeleted={() => {
+                router.push("/");
+                router.refresh();
+              }}
+            />
+          </div>
         </div>
       </header>
 

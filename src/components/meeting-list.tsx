@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownUp, ArrowUpRight, FileText, Mic, Video, XCircle } from "lucide-react";
 import { BraceLabel } from "@/components/logo";
 import { LikeButton } from "@/components/like-button";
+import { DeleteMeetingButton } from "@/components/delete-meeting-button";
 import { BrandSpinner } from "@/components/signal-loader";
 import { formatDate, formatDuration } from "@/lib/format";
 import type { MeetingListItem } from "@/lib/queries";
@@ -21,24 +22,31 @@ const SORTS = [
 ] as const;
 
 function List({ meetings }: { meetings: MeetingListItem[] }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
+  const router = useRouter();
   const [liked, setLiked] = useState<Record<string, boolean>>(() => Object.fromEntries(meetings.map((m) => [m.id, m.liked])));
-  const sortIdx = Math.max(0, SORTS.findIndex((s) => s.key === params.get("sort")));
+  const [deleted, setDeleted] = useState<Set<string>>(() => new Set());
+  const [sortIdx, setSortIdx] = useState(() => Math.max(0, SORTS.findIndex((s) => s.key === params.get("sort"))));
   const sort = SORTS[sortIdx];
 
   const sorted = useMemo(
-    () => meetings.map((m) => ({ ...m, liked: liked[m.id] ?? m.liked })).sort(sort.compare),
-    [meetings, liked, sort],
+    () =>
+      meetings
+        .filter((m) => !deleted.has(m.id))
+        .map((m) => ({ ...m, liked: liked[m.id] ?? m.liked }))
+        .sort(sort.compare),
+    [meetings, liked, deleted, sort],
   );
 
+  // Sorting is instant and client-side; only the URL is updated (no server round trip), so a
+  // shared or refreshed link keeps the order.
   function cycleSort() {
-    const next = SORTS[(sortIdx + 1) % SORTS.length];
-    const qs = new URLSearchParams(params);
-    if (next.key === "date") qs.delete("sort");
-    else qs.set("sort", next.key);
-    router.replace(qs.size ? `${pathname}?${qs}` : pathname, { scroll: false });
+    const nextIdx = (sortIdx + 1) % SORTS.length;
+    setSortIdx(nextIdx);
+    const url = new URL(window.location.href);
+    if (SORTS[nextIdx].key === "date") url.searchParams.delete("sort");
+    else url.searchParams.set("sort", SORTS[nextIdx].key);
+    window.history.replaceState(null, "", url);
   }
 
   return (
@@ -76,6 +84,15 @@ function List({ meetings }: { meetings: MeetingListItem[] }) {
                       <h3 className="font-medium leading-snug transition group-hover:text-brand">{m.title}</h3>
                       <div className="flex shrink-0 items-center gap-2">
                         <ArrowUpRight className="size-4 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+                        <DeleteMeetingButton
+                          meetingId={m.id}
+                          title={m.title}
+                          className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 max-sm:opacity-100"
+                          onDeleted={() => {
+                            setDeleted((d) => new Set(d).add(m.id));
+                            router.refresh(); // refresh the stats strip in the background
+                          }}
+                        />
                         <LikeButton
                           meetingId={m.id}
                           initial={m.liked}

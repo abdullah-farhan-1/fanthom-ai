@@ -1,4 +1,4 @@
-import { db } from "@/lib/supabase";
+import { db, BUCKET } from "@/lib/supabase";
 
 // Lightweight status for polling while a meeting is processing.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -33,4 +33,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { error } = await db().from("meetings").update(update).eq("id", id);
   if (error) return Response.json({ error: error.message }, { status: 500 });
   return Response.json({ speakers: update.speakers ?? current.speakers, liked: update.liked });
+}
+
+// Delete a meeting: its recording in storage, then the row (segments, summaries and highlights cascade).
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { data: meeting } = await db().from("meetings").select("media_path").eq("id", id).maybeSingle();
+  if (!meeting) return Response.json({ error: "Not found" }, { status: 404 });
+  if (meeting.media_path) {
+    const { error } = await db().storage.from(BUCKET).remove([meeting.media_path]);
+    if (error) return Response.json({ error: `Could not delete the recording: ${error.message}` }, { status: 500 });
+  }
+  const { error } = await db().from("meetings").delete().eq("id", id);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ ok: true });
 }
