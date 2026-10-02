@@ -1,17 +1,21 @@
-// Builds a many-speaker test meeting with exact ground truth: one Gemini TTS call per line, each
+// Builds a many-speaker test meeting with exact ground truth: one TTS call per line, each
 // speaker with a fixed voice, concatenated with short gaps. Writes <name>.wav and <name>.truth.json
 // (who spoke when). Usage: node --env-file=.env.local scripts/generate-multispeaker.mts samples/offsite-planning.txt
 import { readFileSync, writeFileSync } from "node:fs";
 
-const VOICES: Record<string, string> = { Priya: "Kore", Marcus: "Charon", Elena: "Aoede", Tom: "Puck", Grace: "Leda" };
-// Free-tier TTS allows ~10 requests per model per day, so speakers are spread across models.
-// Each speaker always uses the same model so their voice stays consistent.
-const MODEL: Record<string, string> = {
-  Priya: "gemini-2.5-flash-preview-tts",
-  Tom: "gemini-3.1-flash-tts-preview",
-  Grace: "gemini-3.1-flash-tts-preview",
-  Marcus: "gemini-3.8-flash-lite-tts",
-  Elena: "gemini-3.8-flash-lite-tts",
+// Local Piper neural TTS: free, offline, deterministic, one distinct voice per speaker.
+// PIPER (binary) and PIPER_VOICES (dir with <voice>.onnx) point at a local install:
+//   python3 -m venv .venv && .venv/bin/pip install piper-tts
+//   .venv/bin/python -m piper.download_voices en_GB-alba-medium ... --data-dir voices
+import { execFileSync } from "node:child_process";
+const PIPER = process.env.PIPER ?? "piper";
+const VOICE_DIR = process.env.PIPER_VOICES ?? "voices";
+const VOICES: Record<string, string> = {
+  Priya: "en_GB-alba-medium",
+  Marcus: "en_US-ryan-medium",
+  Elena: "en_US-amy-medium",
+  Tom: "en_US-joe-medium",
+  Grace: "en_US-kristin-medium",
 };
 const GAP_S = 0.35;
 
@@ -22,31 +26,10 @@ const lines = readFileSync(input, "utf8").split("\n").map((l) => l.trim()).filte
   return { speaker, text: rest.join(":").trim() };
 });
 
-async function say(text: string, voice: string, model: string) {
-  for (let attempt = 1; ; attempt++) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY ?? "", "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `Say naturally, as part of a relaxed work meeting: ${text}` }] }],
-        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
-      }),
-    });
-    if (res.status === 429 && /quota/i.test(await res.clone().text()) && /per ?day|PerDay|requests, limit/i.test(await res.clone().text())) {
-      throw new Error(`daily TTS quota exhausted for ${model}`);
-    }
-    if ((res.status === 429 || res.status >= 500) && attempt < 6) {
-      const wait = 5 * 2 ** attempt;
-      console.log(`  HTTP ${res.status}, retrying in ${wait}s`);
-      await new Promise((r) => setTimeout(r, wait * 1000));
-      continue;
-    }
-    const json = await res.json();
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${json.error?.message}`);
-    const part = json.candidates?.[0]?.content?.parts?.find((p: { inlineData?: unknown }) => p.inlineData);
-    if (!part) throw new Error(`no audio for: ${text}`);
-    return { pcm: Buffer.from(part.inlineData.data, "base64"), rate: Number(/rate=(\d+)/.exec(part.inlineData.mimeType)?.[1] ?? 24000) };
-  }
+function say(text: string, voice: string) {
+  const out = execFileSync(PIPER, ["-m", `${VOICE_DIR}/${voice}.onnx`, "--output-raw"], { input: text, maxBuffer: 1 << 28 });
+  const rate = JSON.parse(readFileSync(`${VOICE_DIR}/${voice}.onnx.json`, "utf8")).audio.sample_rate as number;
+  return { pcm: out, rate };
 }
 
 function wav(pcm: Buffer, rate: number) {
@@ -63,7 +46,7 @@ let t = 0;
 let rate = 24000;
 for (const [i, l] of lines.entries()) {
   process.stdout.write(`line ${i + 1}/${lines.length} ${l.speaker}\r`);
-  const r = await say(l.text, VOICES[l.speaker], MODEL[l.speaker]);
+  const r = say(l.text, VOICES[l.speaker]);
   rate = r.rate;
   const dur = r.pcm.length / 2 / rate;
   truth.push({ speaker: l.speaker, start: +t.toFixed(3), end: +(t + dur).toFixed(3), text: l.text });
