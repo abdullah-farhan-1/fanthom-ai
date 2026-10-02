@@ -200,6 +200,7 @@
   50% { transform: scaleY(1); }
 }
 .listen-bar {
+  transform-box: fill-box;
   transform-origin: center;
   animation: listen 1.1s ease-in-out infinite;
 }

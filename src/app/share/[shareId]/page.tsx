@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BraceLabel } from "@/components/logo";
 import { notFound } from "next/navigation";
 import { db, BUCKET } from "@/lib/supabase";
 import { formatDate, formatTime, speakerLabel } from "@/lib/format";
@@ -49,7 +50,7 @@ export default async function SharePage({ params }: PageProps<"/share/[shareId]"
 
   return (
     <div className="rise mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <p className="label-mono !text-brand">Shared clip</p>
+      <BraceLabel>shared clip</BraceLabel>
       <h1 className="mt-2 font-display text-2xl font-medium tracking-tight sm:text-3xl">{h.title || "Highlight"}</h1>
       <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
         From “{meeting.title}” · {formatDate(meeting.meeting_date)} · {formatTime(h.start)}–{formatTime(h.end)}

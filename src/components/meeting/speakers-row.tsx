@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BraceLabel } from "@/components/logo";
 import { Check, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,7 +39,7 @@ export function SpeakersRow({
   return (
     <div className="border-t border-border px-4 py-3 sm:px-5">
       <div className="mb-2 flex items-center justify-between">
-        <p className="label-mono">Speakers · talk time</p>
+        <BraceLabel>speakers · talk time</BraceLabel>
         <p className="label-mono !normal-case !tracking-normal">click a name to rename</p>
       </div>
       <div className="mb-3 flex h-1 overflow-hidden rounded-full bg-muted">

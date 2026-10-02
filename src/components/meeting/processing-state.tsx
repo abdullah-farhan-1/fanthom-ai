@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { BraceLabel } from "@/components/logo";
+import { SignalLoader } from "@/components/signal-loader";
 import { useEffect, useState } from "react";
 import { Check, Loader2, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -38,7 +40,8 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
   return (
     <div className="mx-auto max-w-lg px-4 py-16">
       <div className="panel p-8">
-        <p className="label-mono">Processing</p>
+        {status.status !== "failed" && <SignalLoader className="mb-6" />}
+        <BraceLabel>processing</BraceLabel>
         <h1 className="mt-2 font-display text-xl font-medium">{meeting.title}</h1>
         {status.status === "failed" ? (
           <div className="mt-6 space-y-4">

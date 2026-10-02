@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { BraceLabel } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format";
 import type { Segment } from "@/lib/types";
@@ -36,7 +37,7 @@ export function Chapters({
 
   return (
     <div className="border-t border-border px-4 py-3 sm:px-5">
-      <p className="label-mono mb-2">Chapters · {items.length}</p>
+      <BraceLabel className="mb-2">chapters · {items.length}</BraceLabel>
       <div ref={strip} className="scroll-thin flex gap-2 overflow-x-auto pb-1">
         {items.map((c, i) => {
           const active = i === activeIdx;

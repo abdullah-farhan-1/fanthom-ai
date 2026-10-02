@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BraceLabel } from "@/components/logo";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
 import { formatDate, formatTime, speakerLabel } from "@/lib/format";
@@ -57,7 +58,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
 
   return (
     <div className="rise mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <p className="label-mono">Search · all transcripts</p>
+      <BraceLabel>search · all transcripts</BraceLabel>
       <h1 className="mt-2 font-display text-2xl font-medium tracking-tight sm:text-3xl">{q ? <>Results for “{q}”</> : "Search"}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {q

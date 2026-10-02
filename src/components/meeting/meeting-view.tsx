@@ -118,7 +118,7 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
     <div className="rise mx-auto grid max-w-[1400px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_440px]">
       <header className="lg:col-span-2">
         <p className="label-mono">
-          Meeting · {formatDate(meeting.meeting_date)}
+          <span className="text-brand/70">{"{ "}</span>meeting<span className="text-brand/70">{" }"}</span> · {formatDate(meeting.meeting_date)}
           {duration > 0 && ` · ${formatDuration(duration)}`} · {speakerInfo.size} {speakerInfo.size === 1 ? "speaker" : "speakers"} · {meeting.source}
         </p>
         <h1 className="mt-2 font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>

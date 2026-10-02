@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BraceLabel } from "@/components/logo";
 import {
   AlertTriangle, Check, CheckCircle2, Copy, HelpCircle, Link2, Loader2, Play, Scissors, Sparkles, Trash2, Undo2, X,
 } from "lucide-react";
@@ -107,7 +108,7 @@ function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting;
         <div className="space-y-5">
           {summary.sections.map((section) => (
             <section key={section.heading}>
-              <h3 className="label-mono mb-2">{section.heading}</h3>
+              <BraceLabel className="mb-2">{section.heading.toLowerCase()}</BraceLabel>
               <ul className="space-y-1.5">
                 {section.bullets.map((b, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
@@ -269,7 +270,7 @@ function DecisionsTab({ meeting, segments, speakers, onSeek }: { meeting: Meetin
   return (
     <div className="space-y-5">
       <section>
-        <h3 className="label-mono mb-2">Decisions</h3>
+        <BraceLabel className="mb-2">decisions</BraceLabel>
         {decisions.length ? (
           <ul className="space-y-2">
             {decisions.map((d, i) => (
@@ -289,7 +290,7 @@ function DecisionsTab({ meeting, segments, speakers, onSeek }: { meeting: Meetin
         )}
       </section>
       <section>
-        <h3 className="label-mono mb-2">Open questions</h3>
+        <BraceLabel className="mb-2">open questions</BraceLabel>
         {questions.length ? (
           <ul className="space-y-2">
             {questions.map((q, i) => (

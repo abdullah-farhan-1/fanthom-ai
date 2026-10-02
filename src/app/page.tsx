@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BraceLabel } from "@/components/logo";
 import { AlertTriangle, ArrowUpRight, FileText, Loader2, Mic, Video, XCircle } from "lucide-react";
 import { listMeetings } from "@/lib/queries";
 import { formatDate, formatDuration } from "@/lib/format";
@@ -23,7 +24,7 @@ export default async function Home() {
   return (
     <div className="rise mx-auto max-w-[1100px] px-4 py-10 sm:px-6 sm:py-14">
       <section>
-        <p className="label-mono">Fanthom · AI meeting notes you can check</p>
+        <BraceLabel>conversations, structured</BraceLabel>
         <h1 className="mt-4 max-w-3xl font-display text-3xl font-medium leading-[1.1] tracking-tight sm:text-5xl">
           Every meeting, <span className="text-brand">on the record.</span>
         </h1>
@@ -44,7 +45,7 @@ export default async function Home() {
 
       <section className="mt-10">
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="label-mono">Recent meetings</h2>
+          <BraceLabel>recent meetings</BraceLabel>
           <span className="label-mono">sorted by date</span>
         </div>
 
