@@ -8,6 +8,7 @@ import { NotesPanel } from "./notes-panel";
 import { SpeakersRow } from "./speakers-row";
 import { Chapters } from "./chapters";
 import { Timeline } from "./timeline";
+import { LikeButton } from "@/components/like-button";
 
 export interface SpeakerInfo {
   label: string;
@@ -121,7 +122,10 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
           <span className="text-brand/70">{"{ "}</span>meeting<span className="text-brand/70">{" }"}</span> · {formatDate(meeting.meeting_date)}
           {duration > 0 && ` · ${formatDuration(duration)}`} · {speakerInfo.size} {speakerInfo.size === 1 ? "speaker" : "speakers"} · {meeting.source}
         </p>
-        <h1 className="mt-2 font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <h1 className="font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>
+          <LikeButton meetingId={meeting.id} initial={Boolean(meeting.liked)} className="mt-1 size-9" />
+        </div>
       </header>
 
       <div className="min-w-0 space-y-5">

@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { BraceLabel } from "@/components/logo";
 import {
-  AlertTriangle, Check, CheckCircle2, Copy, HelpCircle, Link2, Loader2, Play, Scissors, Sparkles, Trash2, Undo2, X,
+  AlertTriangle, Check, CheckCircle2, Copy, HelpCircle, Link2, Play, Scissors, Sparkles, Trash2, Undo2, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/signal-loader";
+import { BrandSpinner, Skeleton } from "@/components/signal-loader";
 import { formatDate, formatTime, ownerLabel, withNames } from "@/lib/format";
 import { TEMPLATES, type TemplateKey } from "@/lib/templates";
 import type { ActionItem, Summary } from "@/lib/notes";
@@ -93,7 +93,7 @@ function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting;
       ) : !summary ? (
         <div className="space-y-4 py-2" role="status" aria-live="polite">
           <p className="label-mono flex items-center gap-2 !text-brand">
-            <Loader2 className="size-3.5 animate-spin" /> Writing {TEMPLATES[template].label} notes
+            <BrandSpinner /> Writing {TEMPLATES[template].label} notes
           </p>
           {[0, 1, 2].map((section) => (
             <div key={section} className="space-y-2">
@@ -365,7 +365,7 @@ function HighlightsTab({
           Clip a moment to share it with someone who was not on the call. Play to a moment, or click a transcript line, then highlight it.
         </p>
         <Button size="sm" onClick={highlightNow} disabled={busy || activeIdx < 0}>
-          {busy ? <Loader2 className="animate-spin" /> : <Scissors />} Highlight {activeIdx >= 0 ? formatTime(segments[activeIdx].start_s) : "moment"}
+          {busy ? <BrandSpinner /> : <Scissors />} Highlight {activeIdx >= 0 ? formatTime(segments[activeIdx].start_s) : "moment"}
         </Button>
       </div>
       {highlights.length === 0 ? (
@@ -426,7 +426,7 @@ export function NotesPanel({
   return (
     <section className="panel p-4 sm:p-5">
       <Tabs defaultValue="summary">
-        <TabsList variant="line" className="scroll-thin mb-4 h-10 w-full justify-start gap-4 overflow-x-auto border-b border-border pb-0">
+        <TabsList variant="line" className="mb-6 h-10 w-full justify-start gap-4 overflow-x-auto border-b border-border pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabsTrigger value="summary" className={TAB}>
             Summary
           </TabsTrigger>

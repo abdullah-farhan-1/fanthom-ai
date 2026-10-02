@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { BraceLabel } from "@/components/logo";
-import { SignalLoader } from "@/components/signal-loader";
+import { BrandSpinner, SignalLoader } from "@/components/signal-loader";
 import { useEffect, useState } from "react";
-import { Check, Loader2, RotateCcw, XCircle } from "lucide-react";
+import { Check, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { Meeting } from "@/lib/types";
@@ -53,7 +53,7 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
               </div>
             </div>
             <Button onClick={retry} disabled={retrying}>
-              {retrying ? <Loader2 className="animate-spin" /> : <RotateCcw />} Try again
+              {retrying ? <BrandSpinner /> : <RotateCcw />} Try again
             </Button>
           </div>
         ) : (
@@ -63,7 +63,7 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
                 {i < current ? (
                   <Check className="size-4 text-brand" />
                 ) : i === current ? (
-                  <Loader2 className="size-4 animate-spin text-brand" />
+                  <BrandSpinner className="text-sm text-brand" />
                 ) : (
                   <span className="size-4 rounded-full border" />
                 )}

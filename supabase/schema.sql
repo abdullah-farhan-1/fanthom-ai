@@ -55,3 +55,6 @@ alter table meetings   enable row level security;
 alter table segments   enable row level security;
 alter table summaries  enable row level security;
 alter table highlights enable row level security;
+
+-- Added later (also in migrations/002_liked.sql)
+alter table meetings add column if not exists liked boolean not null default false;

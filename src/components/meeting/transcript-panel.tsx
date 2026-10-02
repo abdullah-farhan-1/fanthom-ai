@@ -116,7 +116,7 @@ export function TranscriptPanel({
 
   return (
     <div className="panel flex h-[70vh] flex-col overflow-hidden lg:h-full">
-      <div className="flex items-center justify-between border-b border-border px-4 pt-3">
+      <div className="flex items-center justify-between px-4 pb-1 pt-3.5">
         <BraceLabel>transcript · {segments.length} turns</BraceLabel>
         <span className={cn("label-mono flex items-center gap-1.5", follow ? "!text-brand" : "")}>
           <span className={cn("size-1.5 rounded-full", follow ? "bg-brand live-dot" : "bg-muted-foreground")} />

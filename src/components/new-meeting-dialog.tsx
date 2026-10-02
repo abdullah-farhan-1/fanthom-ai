@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { FileAudio, Loader2, Plus, Upload } from "lucide-react";
+import { FileAudio, Plus, Upload } from "lucide-react";
+import { BrandSpinner, UploadMeter } from "@/components/signal-loader";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -44,6 +45,7 @@ export function NewMeetingDialog() {
   const [file, setFile] = useState<File | null>(null);
   const [transcript, setTranscript] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [pct, setPct] = useState<number | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   function reset() {
@@ -52,6 +54,7 @@ export function NewMeetingDialog() {
     setFile(null);
     setTranscript("");
     setBusy(null);
+    setPct(null);
   }
 
   async function submit(e: React.FormEvent) {
@@ -64,14 +67,17 @@ export function NewMeetingDialog() {
         if (file.size > MAX_UPLOAD_BYTES) {
           throw new Error(`This file is ${(file.size / 1e6).toFixed(0)} MB. The demo storage accepts up to 50 MB; compress it (e.g. to MP3) or paste the transcript instead.`);
         }
-        setBusy("Preparing upload…");
+        setBusy("Preparing upload");
         const { path, url } = await postJson("/api/uploads", { filename: file.name, size: file.size });
-        await uploadWithProgress(url, file, (pct) => setBusy(`Uploading… ${pct}%`));
+        setBusy("Uploading");
+        setPct(0);
+        await uploadWithProgress(url, file, setPct);
+        setPct(null);
         body = { source: file.type.startsWith("video") ? "video" : "audio", media_path: path, title: name, meeting_date: date };
       } else {
         body = { source: "transcript", transcript, title: name, meeting_date: date };
       }
-      setBusy("Starting…");
+      setBusy("Starting transcription");
       const { id } = await postJson("/api/meetings", body);
       setOpen(false);
       reset();
@@ -79,6 +85,7 @@ export function NewMeetingDialog() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
       setBusy(null);
+      setPct(null);
     }
   }
 
@@ -91,7 +98,7 @@ export function NewMeetingDialog() {
         <DialogHeader>
           <DialogTitle>Add a meeting</DialogTitle>
           <DialogDescription>
-            Upload a recording or paste a transcript. In Fathom a bot records the call; here the upload stands in for it.
+            Upload a recording or paste a transcript. Fanthom turns it into a transcript, notes, action items and clips.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
@@ -143,10 +150,11 @@ export function NewMeetingDialog() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">The date is used to work out deadlines like “next Friday”.</p>
+          {busy && <UploadMeter pct={pct} label={busy} />}
           <Button type="submit" className="w-full" disabled={!!busy || (tab === "upload" ? !file : transcript.trim().length < 10)}>
             {busy ? (
               <>
-                <Loader2 className="animate-spin" /> {busy}
+                <BrandSpinner /> {busy}
               </>
             ) : (
               "Create notes"

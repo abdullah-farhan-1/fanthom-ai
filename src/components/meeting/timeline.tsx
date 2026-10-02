@@ -252,7 +252,15 @@ export function Timeline({
         <div className="ml-auto flex items-center gap-2 text-sm">
           {now ? (
             <>
-              <span className={cn("size-2 rounded-full", speakerColor(now.order).dot, playing && "live-dot")} />
+              <span className="flex h-3.5 items-center gap-[2px]" aria-hidden>
+                {[0.5, 1, 0.7, 0.9].map((h, i) => (
+                  <span
+                    key={i}
+                    className={cn("w-[3px] rounded-full", speakerColor(now.order).dot, playing && "listen-bar")}
+                    style={{ height: `${h * 100}%`, animationDelay: `${i * 0.11}s` }}
+                  />
+                ))}
+              </span>
               <span className="label-mono !normal-case !tracking-normal">speaking</span>
               <span className={cn("font-medium", speakerColor(now.order).text)}>{now.name}</span>
             </>

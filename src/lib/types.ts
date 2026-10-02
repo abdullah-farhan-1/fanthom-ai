@@ -22,5 +22,6 @@ export interface Meeting {
   speakers: Record<string, string>;
   notes: import("./notes").Notes | null;
   model: string | null;
+  liked?: boolean;
   created_at: string;
 }

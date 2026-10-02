@@ -9,19 +9,28 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return Response.json(data);
 }
 
-// Rename speakers: body {"speakers": {"0": "Maria"}}
+// Rename speakers {"speakers": {"0": "Maria"}} and/or like {"liked": true}
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = (await request.json().catch(() => null)) as { speakers?: Record<string, string> } | null;
-  if (!body?.speakers) return Response.json({ error: "speakers is required" }, { status: 400 });
+  const body = (await request.json().catch(() => null)) as { speakers?: Record<string, string>; liked?: boolean } | null;
+  if (!body || (!body.speakers && typeof body.liked !== "boolean")) {
+    return Response.json({ error: "speakers or liked is required" }, { status: 400 });
+  }
   const { data: current } = await db().from("meetings").select("speakers").eq("id", id).maybeSingle();
   if (!current) return Response.json({ error: "Not found" }, { status: 404 });
-  const speakers = { ...current.speakers };
-  for (const [label, name] of Object.entries(body.speakers)) {
-    const clean = name.trim().slice(0, 60);
-    if (clean) speakers[label] = clean;
-    else delete speakers[label];
+
+  const update: { speakers?: Record<string, string>; liked?: boolean } = {};
+  if (body.speakers) {
+    const speakers = { ...current.speakers };
+    for (const [label, name] of Object.entries(body.speakers)) {
+      const clean = name.trim().slice(0, 60);
+      if (clean) speakers[label] = clean;
+      else delete speakers[label];
+    }
+    update.speakers = speakers;
   }
-  await db().from("meetings").update({ speakers }).eq("id", id);
-  return Response.json({ speakers });
+  if (typeof body.liked === "boolean") update.liked = body.liked;
+  const { error } = await db().from("meetings").update(update).eq("id", id);
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  return Response.json({ speakers: update.speakers ?? current.speakers, liked: update.liked });
 }

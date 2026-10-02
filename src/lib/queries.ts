@@ -16,12 +16,14 @@ export interface MeetingListItem {
   action_items: number;
   needs_review: number;
   speakers: string[];
+  liked: boolean;
+  created_at: string;
 }
 
 export async function listMeetings(): Promise<MeetingListItem[]> {
   const { data, error } = await db()
     .from("meetings")
-    .select("id, title, meeting_date, source, duration_s, status, stage, notes, speakers")
+    .select("*") // "*" so the list still works before the liked column migration has been run
     .order("meeting_date", { ascending: false })
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -37,6 +39,8 @@ export async function listMeetings(): Promise<MeetingListItem[]> {
     action_items: m.notes?.action_items?.length ?? 0,
     needs_review: (m.notes?.action_items ?? []).filter((a: { status: string }) => a.status === "needs_review").length,
     speakers: Object.values(m.speakers ?? {}) as string[],
+    liked: Boolean(m.liked),
+    created_at: m.created_at,
   }));
 }
 
