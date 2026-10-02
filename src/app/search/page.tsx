@@ -46,7 +46,18 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       .select("meeting_id, idx, speaker, start_s, text")
       .textSearch("tsv", q, { type: "websearch", config: "english" })
       .limit(200);
-    hits = (data ?? []).map((h) => ({ ...h, start_s: Number(h.start_s) }));
+    let rows = data ?? [];
+    // Full-text search ignores very common words ("how", "what", "the"). If it finds nothing,
+    // fall back to a plain case-insensitive match so those searches still work.
+    if (!rows.length) {
+      const fallback = await db()
+        .from("segments")
+        .select("meeting_id, idx, speaker, start_s, text")
+        .ilike("text", `%${q.replace(/[%_]/g, "")}%`)
+        .limit(200);
+      rows = fallback.data ?? [];
+    }
+    hits = rows.map((h) => ({ ...h, start_s: Number(h.start_s) }));
     const ids = [...new Set(hits.map((h) => h.meeting_id))];
     const titleMatches = await db().from("meetings").select("id").eq("status", "ready").ilike("title", `%${q}%`);
     for (const m of titleMatches.data ?? []) if (!ids.includes(m.id)) ids.push(m.id);
@@ -70,13 +81,17 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         {meetings.map((m) => {
           const mine = hits.filter((h) => h.meeting_id === m.id).sort((a, b) => a.idx - b.idx);
           return (
-            <section key={m.id} className="panel p-4 sm:p-5">
-              <Link href={`/meetings/${m.id}`} className="font-medium hover:text-brand">
+            <section
+              key={m.id}
+              className="panel group relative p-4 transition-colors hover:border-brand/40 hover:bg-foreground/[0.03] sm:p-5"
+            >
+              {/* The title link stretches over the whole card; moment links below sit above it. */}
+              <Link href={`/meetings/${m.id}`} className="font-medium transition-colors after:absolute after:inset-0 after:rounded-[inherit] group-hover:text-brand">
                 {m.title}
               </Link>
               <span className="ml-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{formatDate(m.meeting_date)}</span>
               {mine.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Title matches.</p>}
-              <ul className="mt-2 space-y-1">
+              <ul className="relative z-10 mt-2 space-y-1">
                 {mine.slice(0, 12).map((h) => (
                   <li key={h.idx}>
                     <Link
