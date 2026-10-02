@@ -29,7 +29,7 @@ export function BackdropMark() {
               height={height}
               rx="9"
               className="backdrop-bar fill-brand" fillOpacity={0.55}
-              style={{ animationDelay: `${i * 0.7}s` }}
+              style={{ animationDelay: `${i * -0.6}s` }}
             />
           );
         })}

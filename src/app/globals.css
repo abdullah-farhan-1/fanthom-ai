@@ -210,8 +210,9 @@
 
 /* Background brand mark: bars breathe very slowly. */
 @keyframes breathe {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.8); }
+  /* 80% of full length down to flat and back; staggered delays turn it into a slow wave */
+  0%, 100% { transform: scaleY(0.8); }
+  50% { transform: scaleY(0.02); }
 }
 .backdrop-bar {
   transform-box: fill-box;
