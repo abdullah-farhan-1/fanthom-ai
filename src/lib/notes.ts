@@ -32,6 +32,7 @@ const Cited = { idx: Idx, quote: Text };
 
 const RawNotes = z.object({
   overview: Text.default(""),
+  participants: items(z.string().trim().min(2)),
   speaker_names: items(
     z.object({ label: z.string(), name: z.string().min(1), idx: Idx, evidence: z.enum(["self", "addressed"]).catch("addressed") }),
   ),
@@ -132,6 +133,7 @@ ${transcriptBlock(segments, speakers)}
 Return JSON with exactly these keys:
 {
   "overview": "2-4 sentence summary of what the meeting was about and its outcome. No small talk.",
+  "participants": ["first name of each person who SPEAKS in this meeting, not people who are only mentioned"],
   "speaker_names": [{"label": "Speaker N exactly as shown", "name": "first name", "idx": line number of the evidence, "evidence": "self" | "addressed"}]  // for generic "Speaker N" labels only. "self": on line idx that speaker states their own name ("I'm Sara"). "addressed": on line idx a DIFFERENT speaker says the name while talking to Speaker N ("Good to see you, Sara"), so cite the other speaker's line. List every piece of evidence you find, including repeats,
   "chapters": [{"title": "short topic title", "idx": first line of the topic}]  // ${chapters} chapters in order, each a distinct topic,
   "action_items": [{"task": "imperative, specific", "owner": "name as it appears in the transcript, or null", "due_text": "the words used for the deadline, or null", "due_date": "YYYY-MM-DD resolved from the meeting date, or null", "idx": 0, "quote": "..."}]  // explicit commitments or assignments, not ideas or maybes. First-person commitments count and are owned by the speaker ("I'll send it", "I can have the fix in by Friday"). If the meeting ends with a recap, check every task in it is in this list. Cite the line where the commitment was first made,
@@ -307,13 +309,19 @@ export interface SpeakerGuess {
   name: string;
   score: number;
   idx: number; // strongest evidence line
-  evidence: "self" | "addressed";
+  evidence: "self" | "addressed" | "model"; // "model": the AI's suggestion, not backed by the transcript
 }
 
 const NOT_NAMES = new Set(
-  "sorry sure fine good great glad here just not going gonna happy trying okay ok yes yeah no so really very also still with from the a an in on at".split(" "),
+  ("sorry sure fine good great glad here there just not going gonna happy trying okay ok yes yeah no so really very also still " +
+    "with from the a an in on at can could will would what when where why who how that this it you we they he she but and " +
+    "because well now then actually honestly basically totally like right done ready back sir mister doctor everyone everybody guys")
+    .split(" "),
 );
-const SELF_INTRO = /\b(?:[Ii]'m|[Ii] am|[Mm]y name is|[Mm]y name's|[Tt]his is)\s+([A-Z][a-z]{2,})\b/g;
+// "this is X" is left out: in conversation it is mostly "this is Can you believe it…".
+const SELF_INTRO = /\b(?:[Ii]'m|[Ii] am|[Mm]y name is|[Mm]y name's)\s+([A-Z][a-z]{2,})\b/g;
+// Vocative: "Charles, I wanna…" / "…good to see you, Shane." The speaker is talking TO that name.
+const VOCATIVE = /(?:^|[.?!]\s+)([A-Z][a-z]{2,}),|,\s+([A-Z][a-z]{2,})[.?!]/g;
 
 function sameName(a: string, b: string) {
   const x = a.toLowerCase();
@@ -369,6 +377,30 @@ export function inferSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[]
     }
   }
 
+  const participants = raw.participants
+    .map((p) => p.trim().split(/\s+/)[0])
+    .filter((p) => /^[A-Z][a-z]+$/.test(p) && !/^speaker$/i.test(p) && !NOT_NAMES.has(p.toLowerCase()));
+  const isParticipant = (name: string) => participants.some((p) => sameName(p, name));
+
+  // Someone who calls out "Charles, …" is talking to Charles: weak evidence for the neighbouring
+  // speaker, and proof that the caller is not Charles.
+  const notThem = new Map<string, string[]>(); // label -> names it cannot be
+  for (const seg of segments) {
+    for (const m of seg.text.matchAll(VOCATIVE)) {
+      const name = m[1] ?? m[2];
+      if (NOT_NAMES.has(name.toLowerCase())) continue;
+      // Always safe: the caller is not the person they are calling.
+      notThem.set(seg.speaker, [...(notThem.get(seg.speaker) ?? []), name]);
+      // As evidence for the other speaker, only names the model lists as participants count
+      // ("Well," "Man," "Legos," match the pattern too).
+      if (!isParticipant(name)) continue;
+      const other = [segments[seg.idx + 1], segments[seg.idx - 1]].find((x) => x && x.speaker !== seg.speaker);
+      if (other && /^\d+$/.test(other.speaker)) add(other.speaker, name, seg.idx, "addressed", 1);
+    }
+  }
+  const contradicted = (label: string, name: string) => (notThem.get(label) ?? []).some((n) => sameName(n, name));
+  for (const [label, byName] of votes) for (const name of [...byName.keys()]) if (contradicted(label, name)) byName.delete(name);
+
   // Each label: the name with the most evidence, if it clearly beats the runner-up.
   const candidates: { label: string; guess: SpeakerGuess }[] = [];
   for (const [label, byName] of votes) {
@@ -384,6 +416,51 @@ export function inferSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[]
     const taken = Object.entries(speakers).some(([l, n]) => l !== c.label && sameName(n, c.guess.name)) ||
       Object.values(out).some((g) => sameName(g.name, c.guess.name));
     if (!taken) out[c.label] = c.guess;
+  }
+
+  // Fallback for speakers the transcript doesn't name: the model's most frequent suggestion,
+  // marked as unverified, and never a name already given to someone else.
+  const taken = (name: string, label: string) =>
+    Object.entries(speakers).some(([l, n]) => l !== label && sameName(n, name)) ||
+    Object.entries(out).some(([l, g]) => l !== label && sameName(g.name, name));
+  const suggestions = new Map<string, Map<string, { count: number; idx: number }>>();
+  for (const g of raw.speaker_names) {
+    const n = /^Speaker (\d+)$/.exec(g.label.trim());
+    const label = n ? String(Number(n[1]) - 1) : null;
+    const name = g.name.trim().split(/\s+/)[0];
+    if (!label || !labels.has(label) || speakers[label] || out[label] || !name || NOT_NAMES.has(name.toLowerCase())) continue;
+    if (contradicted(label, name)) continue; // the transcript shows this speaker talking TO that name
+    const byName = suggestions.get(label) ?? new Map();
+    const key = [...byName.keys()].find((k) => sameName(k, name)) ?? name;
+    const entry = byName.get(key) ?? { count: 0, idx: g.idx };
+    entry.count++;
+    byName.set(key, entry);
+    suggestions.set(label, byName);
+  }
+  // Weak transcript evidence (a single "…joining me, Dan") counts as a suggestion too, for participants only.
+  for (const [label, byName] of votes) {
+    if (speakers[label] || out[label]) continue;
+    for (const [name, v] of byName) {
+      if (!isParticipant(name)) continue;
+      const sug = suggestions.get(label) ?? new Map();
+      const key = [...sug.keys()].find((k) => sameName(k, name)) ?? name;
+      const entry = sug.get(key) ?? { count: 0, idx: v.best.idx };
+      entry.count += v.score;
+      sug.set(key, entry);
+      suggestions.set(label, sug);
+    }
+  }
+  for (const [label, byName] of suggestions) {
+    const [top] = [...byName.entries()].sort((a, b) => b[1].count - a[1].count);
+    if (top && !taken(top[0], label)) out[label] = { name: top[0], score: 0, idx: top[1].idx, evidence: "model" };
+  }
+
+  // One speaker left unnamed and one participant left unassigned: pair them, as a guess.
+  const unnamed = [...labels].filter((l) => /^\d+$/.test(l) && !speakers[l] && !out[l] && !participants.some((p) => contradicted(l, p)));
+  const unused = [...new Set(participants)].filter((p) => !Object.values(speakers).some((n) => sameName(n, p)) && !Object.values(out).some((g) => sameName(g.name, p)));
+  if (unnamed.length === 1 && unused.length === 1 && !contradicted(unnamed[0], unused[0])) {
+    const idx = segments.find((x) => x.speaker === unnamed[0])?.idx ?? 0;
+    out[unnamed[0]] = { name: unused[0], score: 0, idx, evidence: "model" };
   }
   return out;
 }
@@ -433,6 +510,7 @@ Return JSON {"overview": "..."}: a 3-5 sentence summary of the whole meeting, it
 
   const raw: z.infer<typeof RawNotes> = {
     overview,
+    participants: results.flatMap((r) => r.raw.participants),
     speaker_names: results.flatMap((r) => r.raw.speaker_names),
     chapters: results.flatMap((r) => r.raw.chapters),
     action_items: results.flatMap((r) => r.raw.action_items),

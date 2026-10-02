@@ -222,3 +222,16 @@
 @media (prefers-reduced-motion: reduce) {
   .backdrop-bar { animation: none; }
 }
+
+/* Small inline spinner: bars stay visible (never collapse to dots) at label sizes. */
+@keyframes listen-sm {
+  0%, 100% { transform: scaleY(0.5); }
+  50% { transform: scaleY(1); }
+}
+.listen-bar-sm {
+  transform-origin: center;
+  animation: listen-sm 0.9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .listen-bar-sm { animation: none; }
+}

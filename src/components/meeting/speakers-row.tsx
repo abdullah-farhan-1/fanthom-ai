@@ -48,7 +48,7 @@ export function SpeakersRow({
     <div className="border-t border-border px-4 py-3 sm:px-5">
       <div className="mb-2 flex items-center justify-between">
         <BraceLabel>speakers · talk time</BraceLabel>
-        <p className="label-mono !normal-case !tracking-normal">click a name to rename · “guess” = named by AI, hover for evidence</p>
+        <p className="label-mono !normal-case !tracking-normal">click a name to rename · “cited” = named in the transcript · “guess” = AI suggestion</p>
       </div>
       <div className="mb-3 flex h-1 overflow-hidden rounded-full bg-muted">
         {list.map((s) => (
@@ -94,14 +94,26 @@ export function SpeakersRow({
                   title="Rename speaker"
                 >
                   {s.name}
-                  {guesses[s.label] && speakers[s.label] === guesses[s.label].name && (
-                    <span
-                      className="rounded border border-border px-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
-                      title={`Name guessed by AI from ${guesses[s.label].evidence === "self" ? "a self-introduction" : "being addressed by name"} at ${formatTime(segments[guesses[s.label].idx]?.start_s ?? 0)}: “${(segments[guesses[s.label].idx]?.text ?? "").slice(0, 90)}…” Click to correct.`}
-                    >
-                      guess
-                    </span>
-                  )}
+                  {guesses[s.label] && speakers[s.label] === guesses[s.label].name && (() => {
+                    const g = guesses[s.label];
+                    const seg = segments[g.idx];
+                    const cited = g.evidence !== "model";
+                    return (
+                      <span
+                        className={cn(
+                          "rounded border px-1 font-mono text-[9px] uppercase tracking-wider",
+                          cited ? "border-brand/30 text-brand/80" : "border-warn/40 text-warn",
+                        )}
+                        title={
+                          cited
+                            ? `Named from the transcript (${g.evidence === "self" ? "self-introduction" : "addressed by name"}) at ${formatTime(seg?.start_s ?? 0)}: “${(seg?.text ?? "").slice(0, 90)}…”`
+                            : "AI's guess: the transcript doesn't state this name. Click the name to correct it."
+                        }
+                      >
+                        {cited ? "cited" : "guess"}
+                      </span>
+                    );
+                  })()}
                   <Pencil className="size-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                 </button>
               )}
