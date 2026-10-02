@@ -53,7 +53,7 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
   const current = Math.max(1, steps.indexOf(status.stage ?? ""));
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-lg items-center px-4 py-10">
+    <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-lg items-center px-4 pb-[14vh] pt-10">
       <div className="w-full">
       <div className="panel p-8">
         {status.status !== "failed" && <SignalLoader className="mb-6" />}
