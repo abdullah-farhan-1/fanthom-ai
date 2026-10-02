@@ -58,3 +58,6 @@ docs/fathom-research/*
 # ground-truth annotations and cached API responses for evaluation (large, re-downloadable)
 samples/ami/annotations/
 samples/cache/
+
+# private notes (walkthrough script etc.), never published
+docs/private/
