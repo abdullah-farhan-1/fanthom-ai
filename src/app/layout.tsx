@@ -3,6 +3,7 @@ import { Instrument_Sans, JetBrains_Mono, Unbounded } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppHeader } from "@/components/app-header";
+import { BackdropMark } from "@/components/backdrop-mark";
 import "./globals.css";
 
 const body = Instrument_Sans({ variable: "--font-body", subsets: ["latin"] });
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`dark ${body.variable} ${code.variable} ${display.variable} h-full antialiased`}>
       <body className="signal-bg min-h-full flex flex-col">
+        <BackdropMark />
         <TooltipProvider>
           <AppHeader />
           <main className="flex-1">{children}</main>

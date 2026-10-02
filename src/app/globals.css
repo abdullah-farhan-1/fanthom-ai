@@ -207,3 +207,17 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton, .listen-bar { animation: none; }
 }
+
+/* Background brand mark: bars breathe very slowly. */
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.62); }
+}
+.backdrop-bar {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: breathe 7s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .backdrop-bar { animation: none; }
+}
