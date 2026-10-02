@@ -85,7 +85,7 @@ Return JSON with exactly these keys:
   "overview": "2-4 sentence summary of what the meeting was about and its outcome. No small talk.",
   "speaker_names": [{"label": "Speaker N exactly as shown", "name": "real name", "idx": line where the name is evident}]  // only when a generic "Speaker N" label's real name is clearly stated or addressed in the transcript,
   "chapters": [{"title": "short topic title", "idx": first line of the topic}]  // 2-8 chapters in order; fewer for short meetings,
-  "action_items": [{"task": "imperative, specific", "owner": "name as it appears in the transcript, or null", "due_text": "the words used for the deadline, or null", "due_date": "YYYY-MM-DD resolved from the meeting date, or null", "idx": 0, "quote": "..."}]  // only explicit commitments or assignments, not ideas or maybes,
+  "action_items": [{"task": "imperative, specific", "owner": "name as it appears in the transcript, or null", "due_text": "the words used for the deadline, or null", "due_date": "YYYY-MM-DD resolved from the meeting date, or null", "idx": 0, "quote": "..."}]  // explicit commitments or assignments, not ideas or maybes. First-person commitments count and are owned by the speaker ("I'll send it", "I can have the fix in by Friday"). If the meeting ends with a recap, check every task in it is in this list. Cite the line where the commitment was first made,
   "decisions": [{"text": "what was agreed", "idx": 0, "quote": "..."}],
   "questions": [{"text": "open question left unresolved", "idx": 0}]
 }

@@ -48,3 +48,7 @@ samples/*.wav
 samples/*.mp3
 samples/*.m4a
 samples/*.webm
+
+# raw Fathom exports: private recordings, real names, share links (only NOTES.md is public)
+docs/fathom-research/*
+!docs/fathom-research/NOTES.md
