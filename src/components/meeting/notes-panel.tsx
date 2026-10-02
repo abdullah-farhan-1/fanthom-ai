@@ -93,7 +93,7 @@ function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting;
       ) : !summary ? (
         <div className="space-y-4 py-2" role="status" aria-live="polite">
           <p className="label-mono flex items-center gap-2 !text-brand">
-            <BrandSpinner /> Writing {TEMPLATES[template].label} notes
+            <BrandSpinner size="sm" /> Writing {TEMPLATES[template].label} notes
           </p>
           {[0, 1, 2].map((section) => (
             <div key={section} className="space-y-2">

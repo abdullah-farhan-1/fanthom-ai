@@ -27,17 +27,28 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("skeleton", className)} />;
 }
 
-// Inline brand spinner, sized by the surrounding font: { ılıl } with talking bars. Replaces circular spinners.
-export function BrandSpinner({ className, bars = 4 }: { className?: string; bars?: number }) {
+// Inline brand spinner { ı|ı } with talking bars. Fixed pixel sizes so it stays legible inside
+// tiny mono labels as well as buttons (em-based sizing crammed it at small font sizes).
+const SPINNER_SIZES = {
+  sm: { brace: "text-[12px]", bars: "h-[10px] gap-[2.5px]", bar: "w-[2px]", wrap: "gap-[3px]" },
+  md: { brace: "text-[15px]", bars: "h-[13px] gap-[3px]", bar: "w-[2.5px]", wrap: "gap-1" },
+} as const;
+
+export function BrandSpinner({ className, size = "md" }: { className?: string; size?: keyof typeof SPINNER_SIZES }) {
+  const z = SPINNER_SIZES[size];
   return (
-    <span className={cn("inline-flex h-[1em] shrink-0 items-center gap-[0.12em] font-mono leading-none", className)} role="status" aria-label="Loading">
-      <span className="opacity-70">{"{"}</span>
-      <span className="inline-flex h-[0.8em] items-center gap-[0.1em]">
-        {Array.from({ length: bars }, (_, i) => (
-          <span key={i} className="listen-bar inline-block h-full w-[0.14em] rounded-full bg-current" style={{ animationDelay: `${i * 0.12}s` }} />
+    <span className={cn("inline-flex shrink-0 items-center font-mono leading-none", z.wrap, className)} role="status" aria-label="Loading">
+      <span className={cn("opacity-60", z.brace)}>{"{"}</span>
+      <span className={cn("inline-flex items-center", z.bars)}>
+        {[0.55, 1, 0.75].map((h, i) => (
+          <span
+            key={i}
+            className={cn("listen-bar inline-block rounded-full bg-current", z.bar)}
+            style={{ height: `${h * 100}%`, animationDelay: `${i * 0.15}s` }}
+          />
         ))}
       </span>
-      <span className="opacity-70">{"}"}</span>
+      <span className={cn("opacity-60", z.brace)}>{"}"}</span>
     </span>
   );
 }

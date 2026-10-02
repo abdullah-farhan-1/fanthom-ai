@@ -109,7 +109,7 @@ function List({ meetings }: { meetings: MeetingListItem[] }) {
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                       {m.status === "processing" && (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-brand">
-                          <BrandSpinner /> {m.stage ?? "Processing"}
+                          <BrandSpinner size="sm" /> {m.stage ?? "Processing"}
                         </span>
                       )}
                       {m.status === "failed" && (

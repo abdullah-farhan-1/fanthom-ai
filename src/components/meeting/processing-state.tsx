@@ -78,7 +78,7 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
                 {i < current ? (
                   <Check className="size-4 text-brand" />
                 ) : i === current ? (
-                  <BrandSpinner className="text-sm text-brand" />
+                  <BrandSpinner size="sm" className="text-brand" />
                 ) : (
                   <span className="size-4 rounded-full border" />
                 )}
