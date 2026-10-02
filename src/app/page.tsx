@@ -1,69 +1,87 @@
-import Image from "next/image";
+import Link from "next/link";
+import { AlertTriangle, CheckSquare, FileText, Loader2, Mic, Video, XCircle } from "lucide-react";
+import { listMeetings } from "@/lib/queries";
+import { formatDate, formatDuration } from "@/lib/format";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+const SOURCE_ICON = { audio: Mic, video: Video, transcript: FileText };
+
+export default async function Home() {
+  const meetings = await listMeetings();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Meetings</h1>
+          <p className="text-sm text-muted-foreground">
+            {meetings.length} recorded · notes are checked against the transcript before they are trusted
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      {meetings.length === 0 ? (
+        <div className="rounded-2xl border border-dashed bg-background p-12 text-center">
+          <p className="font-medium">No meetings yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Use “New meeting” to upload a recording or paste a transcript.</p>
         </div>
-      </main>
+      ) : (
+        <ul className="space-y-3">
+          {meetings.map((m) => {
+            const Icon = SOURCE_ICON[m.source];
+            return (
+              <li key={m.id}>
+                <Link
+                  href={`/meetings/${m.id}`}
+                  className="group block rounded-2xl border bg-background p-4 transition hover:border-brand/40 hover:shadow-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                      <Icon className="size-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <h2 className="font-medium group-hover:text-brand">{m.title}</h2>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(m.meeting_date)}
+                          {formatDuration(m.duration_s) && ` · ${formatDuration(m.duration_s)}`}
+                          {m.speakers.length > 0 && ` · ${m.speakers.slice(0, 4).join(", ")}${m.speakers.length > 4 ? ` +${m.speakers.length - 4}` : ""}`}
+                        </span>
+                      </div>
+                      {m.status === "ready" && m.overview && (
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{m.overview}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                        {m.status === "processing" && (
+                          <span className="inline-flex items-center gap-1 text-brand">
+                            <Loader2 className="size-3 animate-spin" /> {m.stage ?? "Processing"}…
+                          </span>
+                        )}
+                        {m.status === "failed" && (
+                          <span className="inline-flex items-center gap-1 text-destructive">
+                            <XCircle className="size-3" /> Failed, open to retry
+                          </span>
+                        )}
+                        {m.status === "ready" && (
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
+                            <CheckSquare className="size-3" /> {m.action_items} action items
+                          </span>
+                        )}
+                        {m.needs_review > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-warn-soft px-2 py-0.5 text-warn">
+                            <AlertTriangle className="size-3" /> {m.needs_review} to review
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

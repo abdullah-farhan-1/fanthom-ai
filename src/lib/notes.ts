@@ -38,6 +38,8 @@ const RawSummary = z.object({
 export interface Check {
   status: "ok" | "needs_review";
   reasons: string[];
+  review?: "approved" | "removed" | null; // set by a person in the UI
+  done?: boolean;
 }
 export type ActionItem = z.infer<typeof RawNotes>["action_items"][number] & Check;
 export type Decision = z.infer<typeof RawNotes>["decisions"][number] & Check;

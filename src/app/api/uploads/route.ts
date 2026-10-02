@@ -13,5 +13,5 @@ export async function POST(request: Request) {
   const path = `${crypto.randomUUID()}/${safe}`;
   const { data, error } = await db().storage.from(BUCKET).createSignedUploadUrl(path);
   if (error || !data) return Response.json({ error: error?.message ?? "Could not create upload URL" }, { status: 500 });
-  return Response.json({ path: data.path, token: data.token });
+  return Response.json({ path: data.path, token: data.token, url: data.signedUrl });
 }
