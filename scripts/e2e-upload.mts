@@ -19,7 +19,7 @@ page.on("response", async (r) => {
 await page.goto(BASE, { waitUntil: "networkidle2" });
 await page.locator("button ::-p-text(New meeting)").click();
 const input = await page.waitForSelector('input[type="file"]');
-await (input as any).uploadFile("samples/messy-meeting.wav");
+await (input as unknown as { uploadFile: (p: string) => Promise<void> }).uploadFile("samples/messy-meeting.wav");
 await page.type("#title", "REPRO upload flow");
 await page.locator("button ::-p-text(Create notes)").click();
 for (let i = 0; i < 45; i++) {

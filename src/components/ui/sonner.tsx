@@ -1,45 +1,34 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon } from "lucide-react"
 import { BrandSpinner } from "@/components/signal-loader"
 
+// Signal-styled notifications: frosted glass, a coloured accent strip and icon badge per type,
+// and a mono { type } label above the message (styles in globals.css, .signal-toast).
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="dark"
       className="toaster group"
       icons={{
-        success: (
-          <CircleCheckIcon className="size-4" />
-        ),
-        info: (
-          <InfoIcon className="size-4" />
-        ),
-        warning: (
-          <TriangleAlertIcon className="size-4" />
-        ),
-        error: (
-          <OctagonXIcon className="size-4" />
-        ),
-        loading: (
-          <BrandSpinner className="text-brand" />
-        ),
+        success: <CircleCheckIcon className="size-4" />,
+        info: <InfoIcon className="size-4" />,
+        warning: <TriangleAlertIcon className="size-4" />,
+        error: <OctagonXIcon className="size-4" />,
+        loading: <BrandSpinner size="sm" className="text-brand" />,
       }}
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
       toastOptions={{
+        unstyled: true,
         classNames: {
-          toast: "cn-toast",
+          toast: "signal-toast",
+          icon: "signal-toast-icon",
+          content: "signal-toast-content",
+          title: "signal-toast-title",
+          description: "signal-toast-description",
+          actionButton: "signal-toast-action",
+          cancelButton: "signal-toast-cancel",
+          closeButton: "signal-toast-close",
         },
       }}
       {...props}

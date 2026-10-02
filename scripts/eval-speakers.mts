@@ -146,7 +146,11 @@ function attribution(ref: RefTurn[], hyp: Segment[], collar = 0) {
   const pairs = [...overlap].flatMap(([h, m]) => [...m].map(([r, c]) => ({ h, r, c }))).sort((a, b) => b.c - a.c);
   const map = new Map<string, string>();
   const used = new Set<string>();
-  for (const p of pairs) if (!map.has(p.h) && !used.has(p.r)) (map.set(p.h, p.r), used.add(p.r));
+  for (const p of pairs) {
+    if (map.has(p.h) || used.has(p.r)) continue;
+    map.set(p.h, p.r);
+    used.add(p.r);
+  }
   // majority true speaker per hypothesis label (for naming), without the one-to-one constraint
   const majority = new Map<string, string>();
   for (const [h, m] of overlap) majority.set(h, [...m].sort((a, b) => b[1] - a[1])[0][0]);

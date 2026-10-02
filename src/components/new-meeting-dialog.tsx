@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { FileAudio, Plus, Upload, X } from "lucide-react";
 import { BrandSpinner, UploadMeter } from "@/components/signal-loader";
+import { DatePicker } from "@/components/date-picker";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -19,6 +20,13 @@ const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Supabase free-plan per-file limit
 const today = () => new Date().toLocaleDateString("en-CA");
 
 class Cancelled extends Error {}
+
+// An error with a short title and a helpful description, shown as a two-line notification.
+class Problem extends Error {
+  constructor(public title: string, public detail: string) {
+    super(title);
+  }
+}
 
 // PUT straight to the signed Supabase URL so large recordings never touch our server, with progress.
 // Aborting the signal stops the transfer; an aborted upload leaves no file in storage.
@@ -81,10 +89,13 @@ export function NewMeetingDialog() {
       let body: Record<string, unknown>;
       const name = title.trim() || (file ? file.name.replace(/\.[^.]+$/, "") : "");
       if (tab === "upload") {
-        if (!file) throw new Error("Choose a recording first.");
-        if (date > today()) throw new Error("The meeting date can't be in the future.");
+        if (!file) throw new Problem("No recording chosen", "Choose an audio or video file to upload.");
+        if (date > today()) throw new Problem("Date is in the future", "Pick the day the meeting happened.");
         if (file.size > MAX_UPLOAD_BYTES) {
-          throw new Error(`This file is ${(file.size / 1e6).toFixed(0)} MB. The demo storage accepts up to 50 MB; compress it (e.g. to MP3) or paste the transcript instead.`);
+          throw new Problem(
+            "File too large",
+            `This file is ${(file.size / 1e6).toFixed(0)} MB. Uploads are limited to 50 MB: export the audio as MP3 (an hour is about 30 MB), or paste the transcript instead.`,
+          );
         }
         controller.current = new AbortController();
         const { signal } = controller.current;
@@ -97,7 +108,7 @@ export function NewMeetingDialog() {
         setPct(null);
         body = { source: file.type.startsWith("video") ? "video" : "audio", media_path: path, title: name, meeting_date: date };
       } else {
-        if (date > today()) throw new Error("The meeting date can't be in the future.");
+        if (date > today()) throw new Problem("Date is in the future", "Pick the day the meeting happened.");
         body = { source: "transcript", transcript, title: name, meeting_date: date };
       }
       setBusy("Starting transcription");
@@ -107,7 +118,8 @@ export function NewMeetingDialog() {
       router.push(`/meetings/${id}`);
     } catch (err) {
       if (err instanceof Cancelled) toast("Upload cancelled", { description: file?.name });
-      else toast.error(err instanceof Error ? err.message : "Something went wrong");
+      else if (err instanceof Problem) toast.error(err.title, { description: err.detail });
+      else toast.error("Couldn't add the meeting", { description: err instanceof Error ? err.message : "Something went wrong. Try again." });
       setBusy(null);
       setPct(null);
     } finally {
@@ -173,17 +185,16 @@ export function NewMeetingDialog() {
               />
             </TabsContent>
           </Tabs>
-          <div className="grid grid-cols-[1fr_auto] gap-3">
+          <div className="grid grid-cols-[1fr_12.5rem] gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="title">Title</Label>
               <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Weekly sync" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
-              <Input id="date" type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} required />
+              <DatePicker id="date" value={date} onChange={setDate} />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">The date is used to work out deadlines like “next Friday”.</p>
           {busy && <UploadMeter pct={pct} label={busy} />}
           <div className="flex gap-2">
             <Button type="submit" className="flex-1" disabled={!!busy || (tab === "upload" ? !file : transcript.trim().length < 10)}>
