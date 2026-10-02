@@ -28,14 +28,14 @@ export function withNames(text: string, speakers: Record<string, string>) {
   return text.replace(/\bSpeaker (\d+)\b/g, (match, n) => speakers[String(Number(n) - 1)] ?? match);
 }
 
+// Speaker colours for a dark UI. Lime is reserved for the brand/playhead, so speakers never use it.
 const PALETTE = [
-  "bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-amber-500",
-  "bg-rose-500", "bg-teal-500", "bg-orange-500", "bg-fuchsia-500", "bg-lime-600", "bg-indigo-500",
+  "bg-cyan-400", "bg-violet-400", "bg-indigo-400", "bg-pink-400", "bg-emerald-400",
+  "bg-orange-400", "bg-sky-400", "bg-fuchsia-400", "bg-teal-300", "bg-rose-400",
 ];
 const TEXT = [
-  "text-violet-700 dark:text-violet-300", "text-sky-700 dark:text-sky-300", "text-emerald-700 dark:text-emerald-300", "text-amber-700 dark:text-amber-300",
-  "text-rose-700 dark:text-rose-300", "text-teal-700 dark:text-teal-300", "text-orange-700 dark:text-orange-300", "text-fuchsia-700 dark:text-fuchsia-300",
-  "text-lime-700 dark:text-lime-300", "text-indigo-700 dark:text-indigo-300",
+  "text-cyan-300", "text-violet-300", "text-indigo-300", "text-pink-300", "text-emerald-300",
+  "text-orange-300", "text-sky-300", "text-fuchsia-300", "text-teal-200", "text-rose-300",
 ];
 
 export function speakerColor(order: number) {

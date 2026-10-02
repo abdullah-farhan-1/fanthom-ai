@@ -56,8 +56,9 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">{q ? <>Results for “{q}”</> : "Search"}</h1>
+    <div className="rise mx-auto max-w-4xl px-4 py-10 sm:px-6">
+      <p className="label-mono">Search · all transcripts</p>
+      <h1 className="mt-2 font-display text-2xl font-medium tracking-tight sm:text-3xl">{q ? <>Results for “{q}”</> : "Search"}</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {q
           ? `${hits.length} ${hits.length === 1 ? "moment" : "moments"} in ${meetings.length} ${meetings.length === 1 ? "meeting" : "meetings"}. Matches word forms too, so “decide” finds “decided”.`
@@ -68,20 +69,20 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
         {meetings.map((m) => {
           const mine = hits.filter((h) => h.meeting_id === m.id).sort((a, b) => a.idx - b.idx);
           return (
-            <section key={m.id} className="rounded-2xl border bg-background p-4">
+            <section key={m.id} className="panel p-4 sm:p-5">
               <Link href={`/meetings/${m.id}`} className="font-medium hover:text-brand">
                 {m.title}
               </Link>
-              <span className="ml-2 text-xs text-muted-foreground">{formatDate(m.meeting_date)}</span>
+              <span className="ml-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">{formatDate(m.meeting_date)}</span>
               {mine.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Title matches.</p>}
               <ul className="mt-2 space-y-1">
                 {mine.slice(0, 12).map((h) => (
                   <li key={h.idx}>
                     <Link
                       href={`/meetings/${m.id}?t=${h.start_s}`}
-                      className="flex gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
+                      className="flex gap-3 rounded-lg border-l-2 border-transparent px-2 py-1.5 text-sm hover:border-brand hover:bg-brand-soft"
                     >
-                      <span className="w-12 shrink-0 font-mono text-xs leading-6 text-muted-foreground">{formatTime(h.start_s)}</span>
+                      <span className="w-14 shrink-0 font-mono text-xs leading-6 text-brand">{formatTime(h.start_s)}</span>
                       <span>
                         <span className="font-medium">{speakerLabel(h.speaker, m.speakers ?? {})}:</span> <Marked text={h.text} terms={terms} />
                       </span>

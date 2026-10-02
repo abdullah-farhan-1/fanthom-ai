@@ -41,7 +41,7 @@ export function ClipPlayer({ src, start, end, video }: { src: string; start: num
             ref.current.currentTime = start;
             ref.current.play();
           }}
-          className="flex w-full items-center justify-center gap-1.5 border-t py-2 text-sm text-brand hover:bg-muted"
+          className="flex w-full items-center justify-center gap-1.5 border-t border-border py-2 text-sm text-brand hover:bg-brand-soft"
         >
           <RotateCcw className="size-4" /> Replay clip ({formatTime(end - start)})
         </button>

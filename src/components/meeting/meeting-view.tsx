@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Clock, FileText } from "lucide-react";
 import type { MeetingDetail } from "@/lib/queries";
-import { formatDate, formatDuration, formatTime, speakerLabel } from "@/lib/format";
+import { formatDate, formatDuration, speakerLabel } from "@/lib/format";
 import { TranscriptPanel } from "./transcript-panel";
 import { NotesPanel } from "./notes-panel";
 import { SpeakersRow } from "./speakers-row";
 import { Chapters } from "./chapters";
+import { Timeline } from "./timeline";
 
 export interface SpeakerInfo {
   label: string;
@@ -31,14 +31,20 @@ export function segmentAt(starts: number[], t: number) {
   return found;
 }
 
+const RATES = [1, 1.25, 1.5, 2];
+
 export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }: MeetingDetail & { startAt: number | null }) {
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const [time, setTime] = useState(startAt ?? 0);
+  const [playing, setPlaying] = useState(false);
+  const [rate, setRate] = useState(1);
   const [speakers, setSpeakers] = useState<Record<string, string>>(meeting.speakers ?? {});
+  const [clips, setClips] = useState(highlights);
   const [jumpSignal, setJumpSignal] = useState(0); // bumps when the user seeks, so the transcript scrolls
 
   const starts = useMemo(() => segments.map((s) => s.start_s), [segments]);
   const activeIdx = segmentAt(starts, time);
+  const duration = meeting.duration_s ?? segments.at(-1)?.end_s ?? 0;
 
   const speakerInfo = useMemo(() => {
     const map = new Map<string, SpeakerInfo>();
@@ -51,98 +57,108 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
     return map;
   }, [segments, speakers]);
 
-  const seek = useCallback(
-    (t: number, play = true) => {
-      setTime(t);
-      setJumpSignal((n) => n + 1);
-      const media = mediaRef.current;
-      if (media) {
-        media.currentTime = t;
-        if (play) media.play().catch(() => {});
-      }
-    },
-    [],
-  );
+  const seek = useCallback((t: number, play = true) => {
+    setTime(t);
+    setJumpSignal((n) => n + 1);
+    const media = mediaRef.current;
+    if (media) {
+      media.currentTime = t;
+      if (play) media.play().catch(() => {});
+    }
+  }, []);
+
+  const toggle = useCallback(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    if (media.paused) media.play().catch(() => {});
+    else media.pause();
+  }, []);
 
   // Deep links (?t=123) start at that moment once the media is ready.
   useEffect(() => {
     if (startAt === null) return;
     const media = mediaRef.current;
-    if (!media) return setJumpSignal((n) => n + 1);
+    if (!media) return;
     const go = () => {
       media.currentTime = startAt;
-      setJumpSignal((n) => n + 1);
     };
     if (media.readyState >= 1) go();
     else media.addEventListener("loadedmetadata", go, { once: true });
   }, [startAt]);
 
-  const duration = meeting.duration_s ?? segments.at(-1)?.end_s ?? 0;
-  const isVideo = meeting.source === "video";
+  // Space toggles playback anywhere on the page except in text fields.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.key !== " " || el.closest("input, textarea, button, [role=slider]")) return;
+      e.preventDefault();
+      toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle]);
+
+  const mediaProps = {
+    ref: (el: HTMLMediaElement | null) => {
+      mediaRef.current = el;
+    },
+    src: mediaUrl ?? undefined,
+    preload: "metadata" as const,
+    onTimeUpdate: (e: React.SyntheticEvent<HTMLMediaElement>) => setTime(e.currentTarget.currentTime),
+    onPlay: () => setPlaying(true),
+    onPause: () => setPlaying(false),
+  };
+
+  const chapterMarkers = (meeting.notes?.chapters ?? []).map((c) => ({ t: segments[c.idx]?.start_s ?? 0, label: c.title }));
+  const actionMarkers = (meeting.notes?.action_items ?? [])
+    .filter((a) => a.review !== "removed" && segments[a.idx])
+    .map((a) => ({ t: segments[a.idx].start_s, label: a.task }));
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="min-w-0 space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{meeting.title}</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarDays className="size-4" /> {formatDate(meeting.meeting_date)}
-            </span>
-            {duration > 0 && (
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="size-4" /> {formatDuration(duration)}
-              </span>
-            )}
-            <span>
-              {speakerInfo.size} {speakerInfo.size === 1 ? "speaker" : "speakers"} · {segments.length} lines
-            </span>
-          </div>
-        </div>
+    <div className="rise mx-auto grid max-w-[1400px] gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <header className="lg:col-span-2">
+        <p className="label-mono">
+          Meeting · {formatDate(meeting.meeting_date)}
+          {duration > 0 && ` · ${formatDuration(duration)}`} · {speakerInfo.size} {speakerInfo.size === 1 ? "speaker" : "speakers"} · {meeting.source}
+        </p>
+        <h1 className="mt-2 font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>
+      </header>
 
-        <div className="overflow-hidden rounded-2xl border bg-background">
-          {mediaUrl ? (
-            isVideo ? (
-              <video
-                ref={(el) => {
-                  mediaRef.current = el;
-                }}
-                src={mediaUrl}
-                controls
-                playsInline
-                preload="metadata"
-                className="aspect-video w-full bg-black"
-                onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-              />
-            ) : (
-              <div className="p-4">
-                <audio
-                  ref={(el) => {
-                    mediaRef.current = el;
-                  }}
-                  src={mediaUrl}
-                  controls
-                  preload="metadata"
-                  className="w-full"
-                  onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-                />
-              </div>
-            )
-          ) : (
-            <div className="flex items-center gap-3 p-4 text-sm text-muted-foreground">
-              <FileText className="size-5 text-brand" />
-              Transcript-only meeting · clicking a line selects that moment ({formatTime(time)})
-            </div>
+      <div className="min-w-0 space-y-5">
+        <section className="panel overflow-hidden">
+          {mediaUrl && meeting.source === "video" && (
+            <video {...mediaProps} src={`${mediaUrl}#t=0.1`} playsInline onClick={toggle} className="aspect-video w-full cursor-pointer bg-black" />
           )}
+          {mediaUrl && meeting.source !== "video" && <audio {...mediaProps} className="hidden" />}
+          <Timeline
+            segments={segments}
+            speakerInfo={speakerInfo}
+            duration={duration}
+            time={time}
+            playing={playing}
+            rate={rate}
+            hasMedia={!!mediaUrl}
+            chapters={chapterMarkers}
+            highlights={clips.map((h) => ({ t: h.start_s, label: h.title ?? "Highlight" }))}
+            actions={actionMarkers}
+            onSeek={seek}
+            onToggle={toggle}
+            onRate={() => {
+              const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length];
+              setRate(next);
+              if (mediaRef.current) mediaRef.current.playbackRate = next;
+            }}
+          />
           <Chapters chapters={meeting.notes?.chapters ?? []} segments={segments} duration={duration} time={time} onSeek={seek} />
           <SpeakersRow meetingId={meeting.id} info={speakerInfo} duration={duration} onRenamed={setSpeakers} />
-        </div>
+        </section>
 
         <NotesPanel
           meeting={meeting}
           segments={segments}
           speakers={speakers}
-          highlights={highlights}
+          highlights={clips}
+          onHighlightsChange={setClips}
           time={time}
           activeIdx={activeIdx}
           onSeek={seek}
@@ -150,13 +166,7 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
       </div>
 
       <aside className="lg:sticky lg:top-20 lg:h-[calc(100dvh-6rem)]">
-        <TranscriptPanel
-          segments={segments}
-          speakerInfo={speakerInfo}
-          activeIdx={activeIdx}
-          jumpSignal={jumpSignal}
-          onSeek={seek}
-        />
+        <TranscriptPanel segments={segments} speakerInfo={speakerInfo} activeIdx={activeIdx} jumpSignal={jumpSignal} onSeek={seek} />
       </aside>
     </div>
   );

@@ -48,25 +48,25 @@ export default async function SharePage({ params }: PageProps<"/share/[shareId]"
   const { h, meeting, lines, mediaUrl } = data;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <p className="text-xs font-medium uppercase tracking-wide text-brand">Shared clip</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">{h.title || "Highlight"}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="rise mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <p className="label-mono !text-brand">Shared clip</p>
+      <h1 className="mt-2 font-display text-2xl font-medium tracking-tight sm:text-3xl">{h.title || "Highlight"}</h1>
+      <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
         From “{meeting.title}” · {formatDate(meeting.meeting_date)} · {formatTime(h.start)}–{formatTime(h.end)}
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border bg-background">
+      <div className="panel mt-6 overflow-hidden">
         {mediaUrl ? (
           <ClipPlayer src={mediaUrl} start={h.start} end={h.end} video={meeting.source === "video"} />
         ) : (
           <p className="p-4 text-sm text-muted-foreground">This meeting was added as a transcript, so the clip is text only.</p>
         )}
-        <div className="space-y-3 border-t p-4">
+        <div className="space-y-3 border-t border-border p-4 sm:p-5">
           {lines.map((l) => (
             <div key={l.idx}>
               <p className="text-xs">
-                <span className="font-semibold">{speakerLabel(l.speaker, meeting.speakers ?? {})}</span>{" "}
-                <span className="font-mono text-muted-foreground">{formatTime(Number(l.start_s))}</span>
+                <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-cyan-300">{speakerLabel(l.speaker, meeting.speakers ?? {})}</span>{" "}
+                <span className="font-mono text-[11px] text-muted-foreground">{formatTime(Number(l.start_s))}</span>
               </p>
               <p className="text-sm leading-relaxed">{l.text}</p>
             </div>

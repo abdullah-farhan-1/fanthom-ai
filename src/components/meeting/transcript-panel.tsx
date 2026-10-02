@@ -35,19 +35,19 @@ const Line = memo(function Line({
     <div
       data-idx={segment.idx}
       className={cn(
-        "group cursor-pointer rounded-lg px-3 py-1.5 transition-colors",
-        active ? "bg-brand-soft" : "hover:bg-muted/60",
-        current && "ring-1 ring-warn",
+        "group relative cursor-pointer rounded-lg border-l-2 px-3 py-1.5 transition-colors",
+        active ? "border-brand bg-brand-soft" : "border-transparent hover:bg-foreground/[0.04]",
+        current && "ring-1 ring-warn/70",
       )}
       onClick={() => onSeek(segment.start_s)}
     >
       {showSpeaker && (
-        <div className="mb-0.5 mt-1.5 flex items-baseline gap-2 text-xs">
-          <span className={cn("font-semibold", colorClass)}>{name}</span>
-          <span className="font-mono text-muted-foreground">{formatTime(segment.start_s)}</span>
+        <div className="mb-0.5 mt-2 flex items-baseline gap-2">
+          <span className={cn("font-mono text-[11px] font-semibold uppercase tracking-wider", colorClass)}>{name}</span>
+          <span className="font-mono text-[11px] text-muted-foreground">{formatTime(segment.start_s)}</span>
         </div>
       )}
-      <p className="text-sm leading-relaxed">
+      <p className={cn("text-[13.5px] leading-relaxed", active ? "text-foreground" : "text-foreground/80")}>
         {parts.map((p, i) =>
           i % 2 === 1 ? (
             <mark key={i} className="rounded bg-warn-soft px-0.5 text-foreground">
@@ -114,8 +114,15 @@ export function TranscriptPanel({
   }
 
   return (
-    <div className="flex h-[70vh] flex-col overflow-hidden rounded-2xl border bg-background lg:h-full">
-      <div className="flex items-center gap-2 border-b p-2">
+    <div className="panel flex h-[70vh] flex-col overflow-hidden lg:h-full">
+      <div className="flex items-center justify-between border-b border-border px-4 pt-3">
+        <p className="label-mono">Transcript · {segments.length} turns</p>
+        <span className={cn("label-mono flex items-center gap-1.5", follow ? "!text-brand" : "")}>
+          <span className={cn("size-1.5 rounded-full", follow ? "bg-brand live-dot" : "bg-muted-foreground")} />
+          {follow ? "following" : "paused"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 border-b border-border p-2">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -131,7 +138,7 @@ export function TranscriptPanel({
             }}
             placeholder="Search transcript"
             aria-label="Search transcript"
-            className="h-8 w-full rounded-lg bg-muted/60 pl-8 pr-2 text-sm outline-none focus:ring-2 focus:ring-brand/30"
+            className="h-8 w-full rounded-lg border border-border bg-panel-2/70 pl-8 pr-2 text-sm outline-none focus:border-brand/50"
           />
         </div>
         {query.trim().length >= 2 && (
@@ -154,7 +161,7 @@ export function TranscriptPanel({
 
       <div
         ref={scroller}
-        className="relative flex-1 overflow-y-auto p-2"
+        className="scroll-thin relative flex-1 overflow-y-auto p-2"
         onWheel={() => setFollow(false)}
         onTouchMove={() => setFollow(false)}
       >
@@ -183,7 +190,7 @@ export function TranscriptPanel({
             setFollow(true);
             scrollTo(activeIdx);
           }}
-          className="m-2 inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground"
+          className="m-2 inline-flex items-center justify-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-medium text-brand-foreground shadow-[0_0_20px_-6px_var(--brand)]"
         >
           <LocateFixed className="size-3.5" /> Back to current moment
         </button>

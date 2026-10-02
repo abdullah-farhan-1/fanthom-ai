@@ -37,8 +37,9 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16">
-      <div className="rounded-2xl border bg-background p-8">
-        <h1 className="text-lg font-semibold">{meeting.title}</h1>
+      <div className="panel p-8">
+        <p className="label-mono">Processing</p>
+        <h1 className="mt-2 font-display text-xl font-medium">{meeting.title}</h1>
         {status.status === "failed" ? (
           <div className="mt-6 space-y-4">
             <div className="flex gap-3 rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
@@ -57,7 +58,7 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
             {steps.map((step, i) => (
               <li key={step} className="flex items-center gap-3 text-sm">
                 {i < current ? (
-                  <Check className="size-4 text-emerald-600" />
+                  <Check className="size-4 text-brand" />
                 ) : i === current ? (
                   <Loader2 className="size-4 animate-spin text-brand" />
                 ) : (

@@ -36,8 +36,12 @@ export function SpeakersRow({
   }
 
   return (
-    <div className="border-t px-4 py-3">
-      <div className="mb-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
+    <div className="border-t border-border px-4 py-3 sm:px-5">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="label-mono">Speakers · talk time</p>
+        <p className="label-mono !normal-case !tracking-normal">click a name to rename</p>
+      </div>
+      <div className="mb-3 flex h-1 overflow-hidden rounded-full bg-muted">
         {list.map((s) => (
           <div key={s.label} className={speakerColor(s.order).dot} style={{ width: `${(s.seconds / total) * 100}%` }} />
         ))}
@@ -47,7 +51,7 @@ export function SpeakersRow({
           const color = speakerColor(s.order);
           return (
             <div key={s.label} className="flex items-center gap-2 text-sm">
-              <span className={cn("grid size-6 place-items-center rounded-full text-[10px] font-semibold text-white", color.dot)}>
+              <span className={cn("grid size-6 place-items-center rounded-full text-[10px] font-semibold text-background", color.dot)}>
                 {initials(s.name)}
               </span>
               {editing === s.label ? (
@@ -63,7 +67,7 @@ export function SpeakersRow({
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onBlur={() => setEditing(null)}
-                    className="h-7 w-32 rounded-md border bg-background px-2 text-sm"
+                    className="h-7 w-32 rounded-md border border-brand/40 bg-panel-2 px-2 text-sm outline-none"
                     aria-label="Speaker name"
                   />
                   <button type="submit" onMouseDown={(e) => e.preventDefault()} aria-label="Save name" className="text-brand">
@@ -84,7 +88,7 @@ export function SpeakersRow({
                   <Pencil className="size-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                 </button>
               )}
-              <span className="text-xs text-muted-foreground">{Math.round((s.seconds / total) * 100)}%</span>
+              <span className="font-mono text-[11px] text-muted-foreground">{Math.round((s.seconds / total) * 100)}%</span>
             </div>
           );
         })}

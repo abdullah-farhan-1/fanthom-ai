@@ -16,6 +16,8 @@ import type { Meeting, Segment } from "@/lib/types";
 
 type Seek = (t: number) => void;
 
+const TAB = "h-10 flex-none px-0.5 after:!bg-brand after:!bottom-[-1px] data-active:!text-foreground";
+
 function TimeChip({ t, onSeek }: { t: number; onSeek: Seek }) {
   return (
     <button
@@ -52,7 +54,7 @@ function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting;
 
   return (
     <div className="space-y-4">
-      {meeting.notes?.overview && <p className="text-sm leading-relaxed">{withNames(meeting.notes.overview, speakers)}</p>}
+      {meeting.notes?.overview && <p className="border-l-2 border-brand/60 pl-3 text-[15px] leading-relaxed text-foreground/90">{withNames(meeting.notes.overview, speakers)}</p>}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="mr-1 text-xs font-medium text-muted-foreground">Template</span>
         {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
@@ -94,11 +96,11 @@ function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting;
         <div className="space-y-5">
           {summary.sections.map((section) => (
             <section key={section.heading}>
-              <h3 className="mb-1.5 text-sm font-semibold">{section.heading}</h3>
+              <h3 className="label-mono mb-2">{section.heading}</h3>
               <ul className="space-y-1.5">
                 {section.bullets.map((b, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-                    <span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" />
+                    <span className="mt-[9px] h-px w-2.5 shrink-0 bg-brand/70" />
                     <span className="flex-1">{withNames(b.text, speakers)}</span>
                     {b.idx !== null && segments[b.idx] && <TimeChip t={segments[b.idx].start_s} onSeek={onSeek} />}
                   </li>
@@ -174,8 +176,8 @@ function ActionItemsTab({
             <li
               key={index}
               className={cn(
-                "rounded-xl border p-3 transition",
-                flagged && !isRemoved && "border-warn/40 bg-warn-soft/60",
+                "rounded-xl border border-border bg-panel-2/50 p-3 transition",
+                flagged && !isRemoved && "border-warn/40 bg-warn-soft",
                 isRemoved && "opacity-50",
               )}
             >
@@ -209,7 +211,7 @@ function ActionItemsTab({
                     ) : null}
                     {segments[item.idx] && <TimeChip t={segments[item.idx].start_s} onSeek={onSeek} />}
                     {item.status === "needs_review" && item.review === "approved" && (
-                      <span className="inline-flex items-center gap-1 text-emerald-600">
+                      <span className="inline-flex items-center gap-1 text-brand">
                         <CheckCircle2 className="size-3" /> Reviewed
                       </span>
                     )}
@@ -256,12 +258,12 @@ function DecisionsTab({ meeting, segments, speakers, onSeek }: { meeting: Meetin
   return (
     <div className="space-y-5">
       <section>
-        <h3 className="mb-2 text-sm font-semibold">Decisions</h3>
+        <h3 className="label-mono mb-2">Decisions</h3>
         {decisions.length ? (
           <ul className="space-y-2">
             {decisions.map((d, i) => (
-              <li key={i} className={cn("flex items-start gap-2 rounded-xl border p-3 text-sm", d.status === "needs_review" && "border-warn/40 bg-warn-soft/60")}>
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+              <li key={i} className={cn("flex items-start gap-2 rounded-xl border border-border bg-panel-2/50 p-3 text-sm", d.status === "needs_review" && "border-warn/40 bg-warn-soft")}>
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand" />
                 <div className="flex-1">
                   <p>{withNames(d.text, speakers)}</p>
                   {d.status === "needs_review" && <p className="mt-1 text-xs text-warn">⚠ {d.reasons.join(" · ")}</p>}
@@ -276,12 +278,12 @@ function DecisionsTab({ meeting, segments, speakers, onSeek }: { meeting: Meetin
         )}
       </section>
       <section>
-        <h3 className="mb-2 text-sm font-semibold">Open questions</h3>
+        <h3 className="label-mono mb-2">Open questions</h3>
         {questions.length ? (
           <ul className="space-y-2">
             {questions.map((q, i) => (
-              <li key={i} className="flex items-start gap-2 rounded-xl border p-3 text-sm">
-                <HelpCircle className="mt-0.5 size-4 shrink-0 text-sky-600" />
+              <li key={i} className="flex items-start gap-2 rounded-xl border border-border bg-panel-2/50 p-3 text-sm">
+                <HelpCircle className="mt-0.5 size-4 shrink-0 text-cyan-300" />
                 <p className="flex-1">{withNames(q.text, speakers)}</p>
                 {segments[q.idx] && <TimeChip t={segments[q.idx].start_s} onSeek={onSeek} />}
               </li>
@@ -298,17 +300,18 @@ function DecisionsTab({ meeting, segments, speakers, onSeek }: { meeting: Meetin
 function HighlightsTab({
   meeting,
   segments,
-  initial,
+  highlights,
+  setHighlights,
   activeIdx,
   onSeek,
 }: {
   meeting: Meeting;
   segments: Segment[];
-  initial: Highlight[];
+  highlights: Highlight[];
+  setHighlights: (fn: (h: Highlight[]) => Highlight[]) => void;
   activeIdx: number;
   onSeek: Seek;
 }) {
-  const [highlights, setHighlights] = useState(initial);
   const [busy, setBusy] = useState(false);
 
   // A highlight spans the current line and following lines up to ~20 s, like a "clip this" button.
@@ -358,7 +361,7 @@ function HighlightsTab({
       ) : (
         <ul className="space-y-2">
           {highlights.map((h) => (
-            <li key={h.id} className="rounded-xl border p-3">
+            <li key={h.id} className="rounded-xl border border-border bg-panel-2/50 p-3">
               <div className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 size-4 shrink-0 text-brand" />
                 <div className="min-w-0 flex-1">
@@ -391,6 +394,7 @@ export function NotesPanel({
   segments,
   speakers,
   highlights,
+  onHighlightsChange,
   activeIdx,
   onSeek,
 }: {
@@ -398,6 +402,7 @@ export function NotesPanel({
   segments: Segment[];
   speakers: Record<string, string>;
   highlights: Highlight[];
+  onHighlightsChange: (fn: (h: Highlight[]) => Highlight[]) => void;
   time: number;
   activeIdx: number;
   onSeek: Seek;
@@ -407,16 +412,22 @@ export function NotesPanel({
   const open = items.filter((i) => i.review !== "removed").length;
 
   return (
-    <div className="rounded-2xl border bg-background p-4">
+    <section className="panel p-4 sm:p-5">
       <Tabs defaultValue="summary">
-        <TabsList className="mb-3 w-full justify-start overflow-x-auto">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="actions">
-            Action items <span className="ml-1 text-muted-foreground">{open}</span>
-            {toReview > 0 && <span className="ml-1 rounded-full bg-warn-soft px-1.5 text-[10px] text-warn">{toReview} ⚠</span>}
+        <TabsList variant="line" className="scroll-thin mb-4 h-10 w-full justify-start gap-4 overflow-x-auto border-b border-border pb-0">
+          <TabsTrigger value="summary" className={TAB}>
+            Summary
           </TabsTrigger>
-          <TabsTrigger value="decisions">Decisions & questions</TabsTrigger>
-          <TabsTrigger value="highlights">Highlights</TabsTrigger>
+          <TabsTrigger value="actions" className={TAB}>
+            Action items <span className="font-mono text-[11px] text-muted-foreground">{open}</span>
+            {toReview > 0 && <span className="rounded-full bg-warn-soft px-1.5 font-mono text-[10px] text-warn">{toReview} review</span>}
+          </TabsTrigger>
+          <TabsTrigger value="decisions" className={TAB}>
+            Decisions & questions
+          </TabsTrigger>
+          <TabsTrigger value="highlights" className={TAB}>
+            Clips <span className="font-mono text-[11px] text-muted-foreground">{highlights.length}</span>
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="summary">
           <SummaryTab meeting={meeting} segments={segments} speakers={speakers} onSeek={onSeek} />
@@ -428,9 +439,9 @@ export function NotesPanel({
           <DecisionsTab meeting={meeting} segments={segments} speakers={speakers} onSeek={onSeek} />
         </TabsContent>
         <TabsContent value="highlights">
-          <HighlightsTab meeting={meeting} segments={segments} initial={highlights} activeIdx={activeIdx} onSeek={onSeek} />
+          <HighlightsTab meeting={meeting} segments={segments} highlights={highlights} setHighlights={onHighlightsChange} activeIdx={activeIdx} onSeek={onSeek} />
         </TabsContent>
       </Tabs>
-    </div>
+    </section>
   );
 }
