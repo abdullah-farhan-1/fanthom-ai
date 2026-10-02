@@ -23,6 +23,11 @@ export function ownerLabel(owner: string | null, speakers: Record<string, string
   return m ? (speakers[String(Number(m[1]) - 1)] ?? owner) : owner;
 }
 
+// AI prose mentions generic labels ("Speaker 2 will…"); show the current names instead.
+export function withNames(text: string, speakers: Record<string, string>) {
+  return text.replace(/\bSpeaker (\d+)\b/g, (match, n) => speakers[String(Number(n) - 1)] ?? match);
+}
+
 const PALETTE = [
   "bg-violet-500", "bg-sky-500", "bg-emerald-500", "bg-amber-500",
   "bg-rose-500", "bg-teal-500", "bg-orange-500", "bg-fuchsia-500", "bg-lime-600", "bg-indigo-500",

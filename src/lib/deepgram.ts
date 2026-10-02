@@ -27,17 +27,29 @@ export async function transcribeUrl(url: string): Promise<{ segments: Segment[];
   }
   const data = await res.json();
   const utterances: Utterance[] = data.results?.utterances ?? [];
-  const segments = utterances
-    .filter((u) => u.transcript.trim())
-    .map((u, idx) => ({
-      idx,
-      speaker: String(u.speaker),
-      start_s: round(u.start),
-      end_s: round(u.end),
-      text: u.transcript.trim(),
-    }));
+  const segments = mergeTurns(utterances.filter((u) => u.transcript.trim()));
   if (!segments.length) throw new Error("No speech was found in this recording.");
   return { segments, duration: round(data.metadata?.duration ?? segments.at(-1)!.end_s) };
+}
+
+// Deepgram splits a speaker's turn at short pauses ("Life" / "is going good."). Join consecutive
+// utterances from the same speaker into one turn, but keep turns under ~45 s so playback sync stays precise.
+const MAX_GAP_S = 1.5;
+const MAX_TURN_S = 45;
+
+function mergeTurns(utterances: Utterance[]): Segment[] {
+  const out: Segment[] = [];
+  for (const u of utterances) {
+    const speaker = String(u.speaker);
+    const last = out.at(-1);
+    if (last && last.speaker === speaker && u.start - last.end_s <= MAX_GAP_S && u.end - last.start_s <= MAX_TURN_S) {
+      last.text += ` ${u.transcript.trim()}`;
+      last.end_s = round(u.end);
+    } else {
+      out.push({ idx: out.length, speaker, start_s: round(u.start), end_s: round(u.end), text: u.transcript.trim() });
+    }
+  }
+  return out;
 }
 
 function round(n: number) {

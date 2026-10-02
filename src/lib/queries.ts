@@ -1,6 +1,7 @@
 import { db, BUCKET } from "./supabase";
 import { loadSegments } from "./pipeline";
 import type { Meeting, Segment } from "./types";
+import { withNames } from "./format";
 
 export interface MeetingListItem {
   id: string;
@@ -31,7 +32,7 @@ export async function listMeetings(): Promise<MeetingListItem[]> {
     duration_s: m.duration_s === null ? null : Number(m.duration_s),
     status: m.status,
     stage: m.stage,
-    overview: m.notes?.overview ?? null,
+    overview: m.notes?.overview ? withNames(m.notes.overview, m.speakers ?? {}) : null,
     action_items: m.notes?.action_items?.length ?? 0,
     needs_review: (m.notes?.action_items ?? []).filter((a: { status: string }) => a.status === "needs_review").length,
     speakers: Object.values(m.speakers ?? {}) as string[],

@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { formatDate, formatTime, ownerLabel } from "@/lib/format";
+import { formatDate, formatTime, ownerLabel, withNames } from "@/lib/format";
 import { TEMPLATES, type TemplateKey } from "@/lib/templates";
 import type { ActionItem, Summary } from "@/lib/notes";
 import type { Highlight } from "@/lib/queries";
@@ -29,7 +29,7 @@ function TimeChip({ t, onSeek }: { t: number; onSeek: Seek }) {
   );
 }
 
-function SummaryTab({ meeting, segments, onSeek }: { meeting: Meeting; segments: Segment[]; onSeek: Seek }) {
+function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting; segments: Segment[]; speakers: Record<string, string>; onSeek: Seek }) {
   const [template, setTemplate] = useState<TemplateKey>("general");
   const [cache, setCache] = useState<Partial<Record<TemplateKey, Summary>>>({});
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ function SummaryTab({ meeting, segments, onSeek }: { meeting: Meeting; segments:
 
   return (
     <div className="space-y-4">
-      {meeting.notes?.overview && <p className="text-sm leading-relaxed">{meeting.notes.overview}</p>}
+      {meeting.notes?.overview && <p className="text-sm leading-relaxed">{withNames(meeting.notes.overview, speakers)}</p>}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="mr-1 text-xs font-medium text-muted-foreground">Template</span>
         {(Object.keys(TEMPLATES) as TemplateKey[]).map((key) => (
@@ -99,7 +99,7 @@ function SummaryTab({ meeting, segments, onSeek }: { meeting: Meeting; segments:
                 {section.bullets.map((b, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
                     <span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" />
-                    <span className="flex-1">{b.text}</span>
+                    <span className="flex-1">{withNames(b.text, speakers)}</span>
                     {b.idx !== null && segments[b.idx] && <TimeChip t={segments[b.idx].start_s} onSeek={onSeek} />}
                   </li>
                 ))}
@@ -196,7 +196,7 @@ function ActionItemsTab({
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className={cn("text-sm font-medium", item.done && "text-muted-foreground line-through", isRemoved && "line-through")}>
-                    {item.task}
+                    {withNames(item.task, speakers)}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <span className={cn("rounded-full px-2 py-0.5", item.owner ? "bg-brand-soft text-brand" : "bg-muted")}>
@@ -250,7 +250,7 @@ function ActionItemsTab({
   );
 }
 
-function DecisionsTab({ meeting, segments, onSeek }: { meeting: Meeting; segments: Segment[]; onSeek: Seek }) {
+function DecisionsTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting; segments: Segment[]; speakers: Record<string, string>; onSeek: Seek }) {
   const decisions = meeting.notes?.decisions ?? [];
   const questions = meeting.notes?.questions ?? [];
   return (
@@ -263,7 +263,7 @@ function DecisionsTab({ meeting, segments, onSeek }: { meeting: Meeting; segment
               <li key={i} className={cn("flex items-start gap-2 rounded-xl border p-3 text-sm", d.status === "needs_review" && "border-warn/40 bg-warn-soft/60")}>
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
                 <div className="flex-1">
-                  <p>{d.text}</p>
+                  <p>{withNames(d.text, speakers)}</p>
                   {d.status === "needs_review" && <p className="mt-1 text-xs text-warn">⚠ {d.reasons.join(" · ")}</p>}
                   <p className="mt-1 text-xs italic text-muted-foreground">“{d.quote}”</p>
                 </div>
@@ -282,7 +282,7 @@ function DecisionsTab({ meeting, segments, onSeek }: { meeting: Meeting; segment
             {questions.map((q, i) => (
               <li key={i} className="flex items-start gap-2 rounded-xl border p-3 text-sm">
                 <HelpCircle className="mt-0.5 size-4 shrink-0 text-sky-600" />
-                <p className="flex-1">{q.text}</p>
+                <p className="flex-1">{withNames(q.text, speakers)}</p>
                 {segments[q.idx] && <TimeChip t={segments[q.idx].start_s} onSeek={onSeek} />}
               </li>
             ))}
@@ -419,13 +419,13 @@ export function NotesPanel({
           <TabsTrigger value="highlights">Highlights</TabsTrigger>
         </TabsList>
         <TabsContent value="summary">
-          <SummaryTab meeting={meeting} segments={segments} onSeek={onSeek} />
+          <SummaryTab meeting={meeting} segments={segments} speakers={speakers} onSeek={onSeek} />
         </TabsContent>
         <TabsContent value="actions">
           <ActionItemsTab meeting={meeting} items={items} setItems={setItems} segments={segments} speakers={speakers} onSeek={onSeek} />
         </TabsContent>
         <TabsContent value="decisions">
-          <DecisionsTab meeting={meeting} segments={segments} onSeek={onSeek} />
+          <DecisionsTab meeting={meeting} segments={segments} speakers={speakers} onSeek={onSeek} />
         </TabsContent>
         <TabsContent value="highlights">
           <HighlightsTab meeting={meeting} segments={segments} initial={highlights} activeIdx={activeIdx} onSeek={onSeek} />

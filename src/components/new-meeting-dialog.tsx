@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Supabase free-plan per-file limit
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 // PUT straight to the signed Supabase URL so large recordings never touch our server, with progress.
@@ -59,6 +61,9 @@ export function NewMeetingDialog() {
       const name = title.trim() || (file ? file.name.replace(/\.[^.]+$/, "") : "");
       if (tab === "upload") {
         if (!file) throw new Error("Choose a recording first.");
+        if (file.size > MAX_UPLOAD_BYTES) {
+          throw new Error(`This file is ${(file.size / 1e6).toFixed(0)} MB. The demo storage accepts up to 50 MB; compress it (e.g. to MP3) or paste the transcript instead.`);
+        }
         setBusy("Preparing upload…");
         const { path, url } = await postJson("/api/uploads", { filename: file.name, size: file.size });
         await uploadWithProgress(url, file, (pct) => setBusy(`Uploading… ${pct}%`));
@@ -107,7 +112,7 @@ export function NewMeetingDialog() {
                     {file.name} · {(file.size / 1e6).toFixed(1)} MB
                   </span>
                 ) : (
-                  <span>Choose audio or video (MP3, M4A, WAV, MP4, WebM)</span>
+                  <span>Choose audio or video (MP3, M4A, WAV, MP4, WebM), up to 50 MB</span>
                 )}
               </button>
               <input
