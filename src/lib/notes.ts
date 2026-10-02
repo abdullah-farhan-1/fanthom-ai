@@ -384,7 +384,9 @@ export function inferSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[]
 
   // Someone who calls out "Charles, …" is talking to Charles: weak evidence for the neighbouring
   // speaker, and proof that the caller is not Charles.
-  const notThem = new Map<string, string[]>(); // label -> names it cannot be
+  // label -> names it addressed (and how often). Diarization sometimes merges one person's words into
+  // another's turn, so this counts against a name instead of ruling it out.
+  const notThem = new Map<string, string[]>();
   for (const seg of segments) {
     for (const m of seg.text.matchAll(VOCATIVE)) {
       const name = m[1] ?? m[2];
@@ -398,8 +400,19 @@ export function inferSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[]
       if (other && /^\d+$/.test(other.speaker)) add(other.speaker, name, seg.idx, "addressed", 1);
     }
   }
-  const contradicted = (label: string, name: string) => (notThem.get(label) ?? []).some((n) => sameName(n, name));
-  for (const [label, byName] of votes) for (const name of [...byName.keys()]) if (contradicted(label, name)) byName.delete(name);
+  const contradictions = (label: string, name: string) => (notThem.get(label) ?? []).filter((n) => sameName(n, name)).length;
+  const contradicted = (label: string, name: string) => contradictions(label, name) > (votes.get(label)?.get(name)?.score ?? 0);
+  for (const [label, byName] of votes)
+    for (const [name, v] of [...byName]) {
+      v.score -= contradictions(label, name);
+      if (v.score <= 0) byName.delete(name);
+    }
+
+  if (process.env.FANTHOM_DEBUG_NAMES) {
+    console.log("participants:", participants.join(", "));
+    for (const [label, byName] of votes)
+      console.log(`  votes spk${label}:`, [...byName].map(([n, v]) => `${n}=${v.score}`).join(" "));
+  }
 
   // Each label: the name with the most evidence, if it clearly beats the runner-up.
   const candidates: { label: string; guess: SpeakerGuess }[] = [];
