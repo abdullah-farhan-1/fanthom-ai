@@ -14,7 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // Supabase free-plan per-file limit
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Local calendar date (en-CA formats as YYYY-MM-DD). toISOString() would give the UTC date,
+// which is still "yesterday" in Lahore until 5 am.
+const today = () => new Date().toLocaleDateString("en-CA");
 
 class Cancelled extends Error {}
 
@@ -80,6 +82,7 @@ export function NewMeetingDialog() {
       const name = title.trim() || (file ? file.name.replace(/\.[^.]+$/, "") : "");
       if (tab === "upload") {
         if (!file) throw new Error("Choose a recording first.");
+        if (date > today()) throw new Error("The meeting date can't be in the future.");
         if (file.size > MAX_UPLOAD_BYTES) {
           throw new Error(`This file is ${(file.size / 1e6).toFixed(0)} MB. The demo storage accepts up to 50 MB; compress it (e.g. to MP3) or paste the transcript instead.`);
         }
@@ -94,6 +97,7 @@ export function NewMeetingDialog() {
         setPct(null);
         body = { source: file.type.startsWith("video") ? "video" : "audio", media_path: path, title: name, meeting_date: date };
       } else {
+        if (date > today()) throw new Error("The meeting date can't be in the future.");
         body = { source: "transcript", transcript, title: name, meeting_date: date };
       }
       setBusy("Starting transcription");
@@ -176,7 +180,7 @@ export function NewMeetingDialog() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
-              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+              <Input id="date" type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} required />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">The date is used to work out deadlines like “next Friday”.</p>

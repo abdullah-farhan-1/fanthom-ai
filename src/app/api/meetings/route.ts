@@ -19,6 +19,11 @@ export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
   const body = parsed.data;
+  // No future meetings. One day of slack because the browser's local date can be ahead of UTC.
+  const latest = new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10);
+  if (body.meeting_date && body.meeting_date > latest) {
+    return Response.json({ error: "The meeting date can't be in the future." }, { status: 400 });
+  }
 
   const segments = body.source === "transcript" ? parseTranscript(body.transcript ?? "") : null;
   if (body.source === "transcript" && (!segments || segments.length < 2)) {
