@@ -44,10 +44,12 @@ next-env.d.ts
 !.env.example
 
 # sample audio (large, regenerate with scripts/generate-sample-audio.mts)
-samples/*.wav
-samples/*.mp3
-samples/*.m4a
-samples/*.webm
+samples/**/*.wav
+samples/**/*.mp3
+samples/**/*.m4a
+samples/**/*.webm
+samples/**/*.mp4
+samples/**/*.ogg
 
 # raw Fathom exports: private recordings, real names, share links (only NOTES.md is public)
 docs/fathom-research/*

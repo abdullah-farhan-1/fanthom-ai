@@ -76,8 +76,18 @@ const RULES = `Rules:
 - If something is proposed and later changed in the meeting, report only the final version.
 - Empty arrays are correct when nothing qualifies. Do not pad.`;
 
-async function askNotes(segments: Segment[], speakers: Record<string, string>, meetingDate: string) {
-  const prompt = `You are an AI meeting notetaker. The meeting took place on ${dateLine(meetingDate)}.
+interface Part {
+  n: number;
+  of: number;
+  from: string;
+  to: string;
+}
+
+async function askNotes(segments: Segment[], speakers: Record<string, string>, meetingDate: string, chapters: string, part?: Part) {
+  const scope = part
+    ? `\nThis is part ${part.n} of ${part.of} of a longer meeting (${part.from} to ${part.to}). Extract only what is in this part; the other parts are handled separately. Line numbers are global, so cite them exactly as shown.\n`
+    : "";
+  const prompt = `You are an AI meeting notetaker. The meeting took place on ${dateLine(meetingDate)}.${scope}
 
 Transcript (one line per utterance):
 ${transcriptBlock(segments, speakers)}
@@ -86,7 +96,7 @@ Return JSON with exactly these keys:
 {
   "overview": "2-4 sentence summary of what the meeting was about and its outcome. No small talk.",
   "speaker_names": [{"label": "Speaker N exactly as shown", "name": "real name", "idx": line where the name is evident}]  // only when a generic "Speaker N" label's real name is clearly stated or addressed in the transcript,
-  "chapters": [{"title": "short topic title", "idx": first line of the topic}]  // 2-8 chapters in order; fewer for short meetings,
+  "chapters": [{"title": "short topic title", "idx": first line of the topic}]  // ${chapters} chapters in order, each a distinct topic,
   "action_items": [{"task": "imperative, specific", "owner": "name as it appears in the transcript, or null", "due_text": "the words used for the deadline, or null", "due_date": "YYYY-MM-DD resolved from the meeting date, or null", "idx": 0, "quote": "..."}]  // explicit commitments or assignments, not ideas or maybes. First-person commitments count and are owned by the speaker ("I'll send it", "I can have the fix in by Friday"). If the meeting ends with a recap, check every task in it is in this list. Cite the line where the commitment was first made,
   "decisions": [{"text": "what was agreed", "idx": 0, "quote": "..."}],
   "questions": [{"text": "open question left unresolved", "idx": 0}]
@@ -226,17 +236,26 @@ export function checkNotes(raw: z.infer<typeof RawNotes>, segments: Segment[], s
     else kept.push(item);
   }
 
-  const decisions: Decision[] = raw.decisions.map((d) => {
+  const decisions: Decision[] = [];
+  for (const d of [...raw.decisions].sort((a, b) => a.idx - b.idx)) {
+    if (decisions.some((k) => similar(k.text, d.text) >= 0.5)) {
+      merged++;
+      continue;
+    }
     const reasons = citationProblems(d.idx, d.quote, segments);
-    return { ...d, status: reasons.length ? "needs_review" : "ok", reasons };
-  });
+    decisions.push({ ...d, status: reasons.length ? "needs_review" : "ok", reasons });
+  }
+  const questions: { text: string; idx: number }[] = [];
+  for (const q of raw.questions.filter((q) => q.idx >= 0 && q.idx <= max).sort((a, b) => a.idx - b.idx)) {
+    if (!questions.some((k) => similar(k.text, q.text) >= 0.5)) questions.push(q);
+  }
 
   return {
     overview: raw.overview,
     chapters: raw.chapters.filter((c) => c.idx >= 0 && c.idx <= max).sort((a, b) => a.idx - b.idx),
     action_items: kept,
     decisions,
-    questions: raw.questions.filter((q) => q.idx >= 0 && q.idx <= max),
+    questions,
     merged_duplicates: merged,
   };
 }
@@ -253,15 +272,66 @@ function inferredSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[], sp
   return out;
 }
 
-export async function writeNotes(segments: Segment[], speakers: Record<string, string>, meetingDate: string) {
-  let attempt;
+const WINDOW_S = 15 * 60;
+const SINGLE_PASS_MAX_S = 20 * 60;
+const PARALLEL = 3;
+
+async function askNotesWithRetry(...args: Parameters<typeof askNotes>) {
   try {
-    attempt = await askNotes(segments, speakers, meetingDate);
+    return await askNotes(...args);
   } catch (err) {
     // Malformed JSON or wrong shape: one retry before giving up.
     if (!(err instanceof SyntaxError || err instanceof z.ZodError)) throw err;
-    attempt = await askNotes(segments, speakers, meetingDate);
+    return askNotes(...args);
   }
+}
+
+// Long meetings: small models skim very long inputs, so extract per 15-minute window in parallel
+// (line numbers stay global so citations remain checkable), then merge and write one overview.
+async function notesForLongMeeting(segments: Segment[], speakers: Record<string, string>, meetingDate: string) {
+  const windows: Segment[][] = [];
+  for (const s of segments) {
+    const w = Math.floor((s.start_s - segments[0].start_s) / WINDOW_S);
+    (windows[w] ??= []).push(s);
+  }
+  const parts = windows.filter((w) => w?.length);
+  const results: Awaited<ReturnType<typeof askNotes>>[] = new Array(parts.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(PARALLEL, parts.length) }, async () => {
+      while (next < parts.length) {
+        const i = next++;
+        const w = parts[i];
+        const part = { n: i + 1, of: parts.length, from: formatTime(w[0].start_s), to: formatTime(w.at(-1)!.end_s) };
+        results[i] = await askNotesWithRetry(w, speakers, meetingDate, "2-3", part);
+      }
+    }),
+  );
+
+  const overviewPrompt = `These are summaries of consecutive parts of one meeting, in order:
+${results.map((r, i) => `Part ${i + 1}: ${r.raw.overview}`).join("\n")}
+
+Return JSON {"overview": "..."}: a 3-5 sentence summary of the whole meeting, its main topics and outcomes. No new facts.`;
+  const { text } = await generateJson(overviewPrompt);
+  const overview = z.object({ overview: z.string() }).parse(JSON.parse(text)).overview;
+
+  const raw: z.infer<typeof RawNotes> = {
+    overview,
+    speaker_names: results.flatMap((r) => r.raw.speaker_names),
+    chapters: results.flatMap((r) => r.raw.chapters),
+    action_items: results.flatMap((r) => r.raw.action_items),
+    decisions: results.flatMap((r) => r.raw.decisions),
+    questions: results.flatMap((r) => r.raw.questions),
+  };
+  return { raw, model: results[0]?.model ?? "unknown" };
+}
+
+export async function writeNotes(segments: Segment[], speakers: Record<string, string>, meetingDate: string) {
+  const duration = (segments.at(-1)?.end_s ?? 0) - (segments[0]?.start_s ?? 0);
+  const attempt =
+    duration > SINGLE_PASS_MAX_S
+      ? await notesForLongMeeting(segments, speakers, meetingDate)
+      : await askNotesWithRetry(segments, speakers, meetingDate, duration < 5 * 60 ? "2-3" : "3-6");
   const newSpeakers = inferredSpeakers(attempt.raw, segments, speakers);
   const allSpeakers = { ...speakers, ...newSpeakers };
   return { notes: checkNotes(attempt.raw, segments, allSpeakers, meetingDate), speakers: allSpeakers, model: attempt.model };
