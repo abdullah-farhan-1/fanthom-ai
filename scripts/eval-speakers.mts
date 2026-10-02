@@ -76,7 +76,7 @@ const DATASETS: Dataset[] = [
     audio: "docs/fathom-research/recording1/Impromptu Google Meet Meeting - Oct 2 2026 (1).mp4",
     contentType: "video/mp4",
     reference: fathomReference("docs/fathom-research/recording1/transcript.txt", { "Abdullah Farhan": "Abdullah", "Muhammad Asim Iftikhar": "Asim" }),
-    names: null, // names are never said in this call; the eval scores attribution only
+    names: { Abdullah: "Abdullah", Asim: "Asim" }, // rarely said aloud; the key check is that no wrong name appears
     date: "2026-10-02",
     collar: 1, // Fathom timestamps are whole seconds and short replies are folded into turns
   },
@@ -85,7 +85,7 @@ const DATASETS: Dataset[] = [
     audio: "samples/fathom/house-plans.mp4",
     contentType: "video/mp4",
     reference: fathomReference("docs/fathom-research/recording2/transcript.txt", { "Abdullah Farhan": "Abdullah", "Muhammad Asim Iftikhar": "Asim" }),
-    names: null,
+    names: { Abdullah: "Abdullah", Asim: "Asim" },
     date: "2026-10-02",
     collar: 1,
   },
@@ -225,4 +225,37 @@ for (const d of DATASETS) {
     summary.push(line);
   }
 }
+// Piers Morgan show (19 people, 112 min): no full reference, so check what we know for certain:
+// the dominant speaker is the host, Piers, and no name is given to two speakers.
+if (!only.length || only.includes("piers")) {
+  const { db, BUCKET } = await import("../src/lib/supabase");
+  const { data: m } = await db().from("meetings").select("media_path").ilike("title", "%Piers Morgan%").not("media_path", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (m?.media_path) {
+    const file = `${CACHE}/piers.deepgram.json`;
+    let data: DeepgramResponse;
+    if (existsSync(file)) data = JSON.parse(readFileSync(file, "utf8"));
+    else {
+      const { data: signed } = await db().storage.from(BUCKET).createSignedUrl(m.media_path, 3600);
+      console.log("  transcribing piers (not cached)…");
+      data = await requestTranscription({ url: signed!.signedUrl });
+      writeFileSync(file, JSON.stringify(data));
+    }
+    for (const method of methods) {
+      const segs = segmentsFromResponse(data, method);
+      const talk = new Map<string, number>();
+      for (const x of segs) talk.set(x.speaker, (talk.get(x.speaker) ?? 0) + x.end_s - x.start_s);
+      const host = [...talk].sort((a, b) => b[1] - a[1])[0][0];
+      const { notes, speakers } = await writeNotes(segs, {}, "2026-10-02");
+      const names = Object.values(speakers).map((n) => n.toLowerCase().slice(0, 3));
+      const dupes = names.filter((n, i) => names.indexOf(n) !== i).length;
+      const hostOk = sameName(speakers[host] ?? "", "Piers");
+      const g = notes.speaker_guesses ?? {};
+      console.log(`\n=== piers [${method}] ${talk.size} speakers found (19 people)  host=${speakers[host] ?? "-"} ${hostOk ? "✓" : "✗"}  duplicate names ${dupes}`);
+      console.log(`      cited: ${Object.entries(g).filter(([, v]) => v.evidence !== "model").map(([l, v]) => `spk${l}=${v.name}`).join(" ")}`);
+      console.log(`      guess: ${Object.entries(g).filter(([, v]) => v.evidence === "model").map(([l, v]) => `spk${l}=${v.name}`).join(" ")}`);
+      summary.push(`piers           ${method.padEnd(10)} speakers ${talk.size}/19  host ${hostOk ? "✓ Piers" : `✗ ${speakers[host] ?? "-"}`}  duplicate names ${dupes}`);
+    }
+  }
+}
+
 console.log(`\n${summary.join("\n")}`);
