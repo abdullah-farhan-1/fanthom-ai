@@ -211,12 +211,12 @@
 /* Background brand mark: bars breathe very slowly. */
 @keyframes breathe {
   0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.88); }
+  50% { transform: scaleY(0.8); }
 }
 .backdrop-bar {
   transform-box: fill-box;
   transform-origin: center;
-  animation: breathe 11s ease-in-out infinite;
+  animation: breathe 9s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .backdrop-bar { animation: none; }
