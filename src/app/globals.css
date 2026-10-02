@@ -48,7 +48,7 @@
 :root {
   --background: oklch(0.155 0.006 155);
   --foreground: oklch(0.955 0.012 120);
-  --panel: oklch(0.19 0.007 155 / 0.82);
+  --panel: oklch(0.19 0.007 155 / 0.5);
   --panel-2: oklch(0.225 0.008 155);
   --card: oklch(0.19 0.007 155);
   --card-foreground: var(--foreground);
@@ -132,8 +132,10 @@
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05), 0 20px 40px -24px oklch(0 0 0 / 0.6);
-  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 20px 40px -24px oklch(0 0 0 / 0.6);
+  /* Frosted glass: the brand mark behind shows through, softly blurred. */
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
 }
 
 .label-mono {

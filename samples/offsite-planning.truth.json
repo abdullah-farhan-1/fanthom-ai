@@ -1,0 +1,167 @@
+{
+ "speakers": [
+  "Priya",
+  "Marcus",
+  "Elena",
+  "Tom",
+  "Grace"
+ ],
+ "turns": [
+  {
+   "speaker": "Priya",
+   "start": 0,
+   "end": 4.899,
+   "text": "Okay, looks like most people are here. Let's give it one more minute."
+  },
+  {
+   "speaker": "Tom",
+   "start": 5.249,
+   "end": 5.807,
+   "text": "Morning!"
+  },
+  {
+   "speaker": "Grace",
+   "start": 6.157,
+   "end": 7.596,
+   "text": "Morning, everyone."
+  },
+  {
+   "speaker": "Marcus",
+   "start": 7.946,
+   "end": 11.65,
+   "text": "Hi all, sorry, I'm Marcus. I joined the design team last week."
+  },
+  {
+   "speaker": "Priya",
+   "start": 12,
+   "end": 15.762,
+   "text": "Welcome, Marcus. Great to have you with us."
+  },
+  {
+   "speaker": "Elena",
+   "start": 16.112,
+   "end": 18.108,
+   "text": "Welcome! You'll like it here."
+  },
+  {
+   "speaker": "Priya",
+   "start": 18.458,
+   "end": 21.686,
+   "text": "Elena, do you want to kick us off with the venue update?"
+  },
+  {
+   "speaker": "Elena",
+   "start": 22.036,
+   "end": 28.201,
+   "text": "Sure. The hotel in Lisbon confirmed our dates, the twelfth to the fourteenth of November."
+  },
+  {
+   "speaker": "Tom",
+   "start": 28.551,
+   "end": 31.291,
+   "text": "That's great news. Did they agree to the group rate?"
+  },
+  {
+   "speaker": "Elena",
+   "start": 31.641,
+   "end": 36.529,
+   "text": "They did, Tom. Two hundred and ten euros a night, breakfast included."
+  },
+  {
+   "speaker": "Grace",
+   "start": 36.879,
+   "end": 39.212,
+   "text": "Do we know how many rooms we actually need?"
+  },
+  {
+   "speaker": "Priya",
+   "start": 39.562,
+   "end": 44.694,
+   "text": "Good question. Chris from legal said we can't book more than forty without a new contract."
+  },
+  {
+   "speaker": "Tom",
+   "start": 45.044,
+   "end": 48.817,
+   "text": "Well, forty should be plenty. We're thirty four people right now."
+  },
+  {
+   "speaker": "Marcus",
+   "start": 49.167,
+   "end": 51.803,
+   "text": "So, should I start on the badges and the signage?"
+  },
+  {
+   "speaker": "Priya",
+   "start": 52.153,
+   "end": 55.972,
+   "text": "Yes please, Marcus. Can you have a first draft by Friday?"
+  },
+  {
+   "speaker": "Marcus",
+   "start": 56.322,
+   "end": 57.181,
+   "text": "Friday works."
+  },
+  {
+   "speaker": "Grace",
+   "start": 57.531,
+   "end": 61.096,
+   "text": "I can handle the dietary survey. I'll send it out tomorrow."
+  },
+  {
+   "speaker": "Priya",
+   "start": 61.446,
+   "end": 63.373,
+   "text": "Perfect, thank you."
+  },
+  {
+   "speaker": "Tom",
+   "start": 63.723,
+   "end": 67.728,
+   "text": "One thing. Sarah from finance asked whether we're paying for flights centrally."
+  },
+  {
+   "speaker": "Elena",
+   "start": 68.078,
+   "end": 73.071,
+   "text": "I think we should. It's cheaper if we book everything in one batch."
+  },
+  {
+   "speaker": "Priya",
+   "start": 73.421,
+   "end": 77.055,
+   "text": "Agreed. Tom, can you check with Sarah and confirm?"
+  },
+  {
+   "speaker": "Tom",
+   "start": 77.405,
+   "end": 79.901,
+   "text": "Will do. I'll get back to you by Wednesday."
+  },
+  {
+   "speaker": "Marcus",
+   "start": 80.251,
+   "end": 83.142,
+   "text": "Hey Elena, can I get the venue floor plan for the signage?"
+  },
+  {
+   "speaker": "Elena",
+   "start": 83.492,
+   "end": 87.009,
+   "text": "Of course. I'll share it right after this call."
+  },
+  {
+   "speaker": "Grace",
+   "start": 87.359,
+   "end": 89.322,
+   "text": "Thanks, Priya. That was quick."
+  },
+  {
+   "speaker": "Priya",
+   "start": 89.672,
+   "end": 92.574,
+   "text": "Thanks everyone. Same time next week."
+  }
+ ]
+}
