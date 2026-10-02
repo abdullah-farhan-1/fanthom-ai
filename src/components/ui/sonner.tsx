@@ -19,6 +19,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         loading: <BrandSpinner size="sm" className="text-brand" />,
       }}
       toastOptions={{
+        duration: 5000,
         unstyled: true,
         classNames: {
           toast: "signal-toast",
