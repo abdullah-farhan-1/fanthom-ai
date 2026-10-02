@@ -16,15 +16,30 @@ export function ProcessingState({ meeting }: { meeting: Meeting }) {
 
   useEffect(() => {
     if (status.status !== "processing") return;
-    const timer = setInterval(async () => {
-      const res = await fetch(`/api/meetings/${meeting.id}`).catch(() => null);
+    const check = async () => {
+      const res = await fetch(`/api/meetings/${meeting.id}`, { cache: "no-store" }).catch(() => null);
       if (!res?.ok) return;
       const next = await res.json();
       setStatus({ status: next.status, stage: next.stage, error: next.error });
       if (next.status === "ready") router.refresh();
-    }, 2000);
-    return () => clearInterval(timer);
+    };
+    const timer = setInterval(check, 2000);
+    // Background tabs throttle timers; check right away when the user comes back.
+    const onVisible = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [status.status, meeting.id, router]);
+
+  // Once ready, the soft refresh should replace this screen with the meeting (unmounting it and
+  // cancelling this timer). If it hasn't after 4 s, reload the page as a fallback.
+  useEffect(() => {
+    if (status.status !== "ready") return;
+    const t = setTimeout(() => window.location.reload(), 4000);
+    return () => clearTimeout(t);
+  }, [status.status]);
 
   async function retry() {
     setRetrying(true);

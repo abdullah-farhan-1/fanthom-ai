@@ -56,7 +56,13 @@ export async function processMeeting(id: string) {
     await db().from("summaries").upsert({ meeting_id: id, template: "general", content: summary, model });
     await db().from("meetings").update({ notes, speakers, model, status: "ready", stage: null, error: null }).eq("id", id);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    // Never show raw validation dumps to users.
+    const message =
+      err instanceof Error && err.name === "ZodError"
+        ? "The AI returned notes in an unexpected format. Try again."
+        : err instanceof Error
+          ? err.message
+          : String(err);
     console.error(`processMeeting ${id} failed:`, message);
     await db().from("meetings").update({ status: "failed", stage: null, error: message }).eq("id", id);
   }

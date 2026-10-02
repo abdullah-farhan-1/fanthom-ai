@@ -6,30 +6,53 @@ import type { Segment } from "./types";
 
 // ---------- What the model must return ----------
 
-const Cited = { idx: z.number().int(), quote: z.string() };
+// Model output varies run to run, so parsing is lenient per field and per item: optional fields
+// default to null, numbers sent as strings are coerced, and one malformed item is dropped rather
+// than failing the whole meeting. Correctness is then enforced by the transcript checks below.
+const Idx = z.coerce.number().int().catch(-1); // invalid -> -1, which the citation check flags
+const Text = z.coerce.string().catch("");
+const Optional = z.string().nullish().transform((v) => (v && v.trim() ? v : null)).catch(null);
+
+let droppedItems = 0;
+function items<T extends z.ZodTypeAny>(schema: T) {
+  return z
+    .array(z.unknown())
+    .catch([])
+    .default([])
+    .transform((list) =>
+      list.flatMap((x) => {
+        const r = schema.safeParse(x);
+        if (!r.success) droppedItems++;
+        return r.success ? [r.data as z.infer<T>] : [];
+      }),
+    );
+}
+
+const Cited = { idx: Idx, quote: Text };
 
 const RawNotes = z.object({
-  overview: z.string(),
-  speaker_names: z.array(z.object({ label: z.string(), name: z.string(), idx: z.number().int() })).default([]),
-  chapters: z.array(z.object({ title: z.string(), idx: z.number().int() })).default([]),
-  action_items: z
-    .array(
-      z.object({
-        task: z.string(),
-        owner: z.string().nullable(),
-        due_text: z.string().nullable(),
-        due_date: z.string().nullable(),
-        ...Cited,
-      }),
-    )
-    .default([]),
-  decisions: z.array(z.object({ text: z.string(), ...Cited })).default([]),
-  questions: z.array(z.object({ text: z.string(), idx: z.number().int() })).default([]),
+  overview: Text.default(""),
+  speaker_names: items(z.object({ label: z.string(), name: z.string(), idx: Idx.optional() })),
+  chapters: items(z.object({ title: z.string().min(1), idx: Idx })),
+  action_items: items(
+    z.object({
+      task: z.string().min(1),
+      owner: Optional,
+      due_text: Optional,
+      due_date: Optional,
+      ...Cited,
+    }),
+  ),
+  decisions: items(z.object({ text: z.string().min(1), ...Cited })),
+  questions: items(z.object({ text: z.string().min(1), idx: Idx })),
 });
 
 const RawSummary = z.object({
-  sections: z.array(
-    z.object({ heading: z.string(), bullets: z.array(z.object({ text: z.string(), idx: z.number().int().nullable() })) }),
+  sections: items(
+    z.object({
+      heading: z.string().min(1),
+      bullets: items(z.object({ text: z.string().min(1), idx: z.coerce.number().int().nullish().catch(null).transform((v) => v ?? null) })),
+    }),
   ),
 });
 
@@ -52,6 +75,17 @@ export interface Notes {
   merged_duplicates: number;
 }
 export type Summary = z.infer<typeof RawSummary>;
+
+// JSON.parse with a readable error, tolerating a ```json fence around the payload.
+class FormatError extends Error {}
+function parseJson(text: string) {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "");
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    throw new FormatError("The AI returned notes in an unreadable format. Try again.");
+  }
+}
 
 // ---------- Prompting ----------
 
@@ -104,7 +138,10 @@ Return JSON with exactly these keys:
 
 ${RULES}`;
   const { text, model } = await generateJson(prompt);
-  return { raw: RawNotes.parse(JSON.parse(text)), model };
+  droppedItems = 0;
+  const raw = RawNotes.parse(parseJson(text));
+  if (droppedItems) console.warn(`notes: dropped ${droppedItems} malformed item(s) from ${model}`);
+  return { raw, model };
 }
 
 export async function writeSummary(
@@ -127,7 +164,7 @@ The meeting is ${Math.max(1, Math.round(((segments.at(-1)?.end_s ?? 0) - (segmen
 
 ${RULES}`;
   const { text, model } = await generateJson(prompt);
-  const summary = RawSummary.parse(JSON.parse(text));
+  const summary = RawSummary.parse(parseJson(text));
   const max = segments.length - 1;
   for (const section of summary.sections) {
     for (const b of section.bullets) if (b.idx !== null && (b.idx < 0 || b.idx > max)) b.idx = null;
@@ -282,7 +319,7 @@ async function askNotesWithRetry(...args: Parameters<typeof askNotes>) {
     return await askNotes(...args);
   } catch (err) {
     // Malformed JSON or wrong shape: one retry before giving up.
-    if (!(err instanceof SyntaxError || err instanceof z.ZodError)) throw err;
+    if (!(err instanceof FormatError || err instanceof z.ZodError)) throw err;
     return askNotes(...args);
   }
 }
@@ -314,7 +351,7 @@ ${results.map((r, i) => `Part ${i + 1}: ${r.raw.overview}`).join("\n")}
 
 Return JSON {"overview": "..."}: a 3-5 sentence summary of the whole meeting, its main topics and outcomes. No new facts.`;
   const { text } = await generateJson(overviewPrompt);
-  const overview = z.object({ overview: z.string() }).parse(JSON.parse(text)).overview;
+  const overview = z.object({ overview: Text }).parse(parseJson(text)).overview;
 
   const raw: z.infer<typeof RawNotes> = {
     overview,
