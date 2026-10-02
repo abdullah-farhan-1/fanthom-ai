@@ -168,7 +168,15 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
             }}
           />
           <Chapters chapters={meeting.notes?.chapters ?? []} segments={segments} duration={duration} time={time} onSeek={seek} />
-          <SpeakersRow meetingId={meeting.id} info={speakerInfo} duration={duration} onRenamed={setSpeakers} />
+          <SpeakersRow
+            meetingId={meeting.id}
+            info={speakerInfo}
+            duration={duration}
+            onRenamed={setSpeakers}
+            guesses={meeting.notes?.speaker_guesses}
+            speakers={speakers}
+            segments={segments}
+          />
         </section>
 
         <NotesPanel

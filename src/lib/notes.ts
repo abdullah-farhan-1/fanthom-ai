@@ -32,7 +32,9 @@ const Cited = { idx: Idx, quote: Text };
 
 const RawNotes = z.object({
   overview: Text.default(""),
-  speaker_names: items(z.object({ label: z.string(), name: z.string(), idx: Idx.optional() })),
+  speaker_names: items(
+    z.object({ label: z.string(), name: z.string().min(1), idx: Idx, evidence: z.enum(["self", "addressed"]).catch("addressed") }),
+  ),
   chapters: items(z.object({ title: z.string().min(1), idx: Idx })),
   action_items: items(
     z.object({
@@ -73,6 +75,7 @@ export interface Notes {
   decisions: Decision[];
   questions: { text: string; idx: number }[];
   merged_duplicates: number;
+  speaker_guesses?: Record<string, SpeakerGuess>; // names the AI inferred (with evidence), not set by a person
 }
 export type Summary = z.infer<typeof RawSummary>;
 
@@ -129,7 +132,7 @@ ${transcriptBlock(segments, speakers)}
 Return JSON with exactly these keys:
 {
   "overview": "2-4 sentence summary of what the meeting was about and its outcome. No small talk.",
-  "speaker_names": [{"label": "Speaker N exactly as shown", "name": "real name", "idx": line where the name is evident}]  // only when a generic "Speaker N" label's real name is clearly stated or addressed in the transcript,
+  "speaker_names": [{"label": "Speaker N exactly as shown", "name": "first name", "idx": line number of the evidence, "evidence": "self" | "addressed"}]  // for generic "Speaker N" labels only. "self": on line idx that speaker states their own name ("I'm Sara"). "addressed": on line idx a DIFFERENT speaker says the name while talking to Speaker N ("Good to see you, Sara"), so cite the other speaker's line. List every piece of evidence you find, including repeats,
   "chapters": [{"title": "short topic title", "idx": first line of the topic}]  // ${chapters} chapters in order, each a distinct topic,
   "action_items": [{"task": "imperative, specific", "owner": "name as it appears in the transcript, or null", "due_text": "the words used for the deadline, or null", "due_date": "YYYY-MM-DD resolved from the meeting date, or null", "idx": 0, "quote": "..."}]  // explicit commitments or assignments, not ideas or maybes. First-person commitments count and are owned by the speaker ("I'll send it", "I can have the fix in by Friday"). If the meeting ends with a recap, check every task in it is in this list. Cite the line where the commitment was first made,
   "decisions": [{"text": "what was agreed", "idx": 0, "quote": "..."}],
@@ -298,14 +301,89 @@ export function checkNotes(raw: z.infer<typeof RawNotes>, segments: Segment[], s
   };
 }
 
-// Speaker names the model found, applied only to generic numeric labels that exist.
-function inferredSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[], speakers: Record<string, string>) {
+// ---------- Speaker names: evidence, checked against the transcript, then voted ----------
+
+export interface SpeakerGuess {
+  name: string;
+  score: number;
+  idx: number; // strongest evidence line
+  evidence: "self" | "addressed";
+}
+
+const NOT_NAMES = new Set(
+  "sorry sure fine good great glad here just not going gonna happy trying okay ok yes yeah no so really very also still with from the a an in on at".split(" "),
+);
+const SELF_INTRO = /\b(?:[Ii]'m|[Ii] am|[Mm]y name is|[Mm]y name's|[Tt]his is)\s+([A-Z][a-z]{2,})\b/g;
+
+function sameName(a: string, b: string) {
+  const x = a.toLowerCase();
+  const y = b.toLowerCase();
+  if (x === y) return true;
+  // Piers ~ Pierce ~ "Piz" (mis-transcribed): same opening and only a few edits apart
+  return x.slice(0, 2) === y.slice(0, 2) && editDistance(x, y) <= (Math.min(x.length, y.length) >= 4 ? 2 : 3);
+}
+
+// Checks one piece of evidence against the transcript and returns its weight (0 = rejected).
+function evidenceWeight(label: string, name: string, idx: number, kind: "self" | "addressed", segments: Segment[]) {
+  const seg = segments[idx];
+  if (!seg) return 0;
+  const said = new RegExp(`\\b${name.replace(/[^a-z]/gi, "").slice(0, 4)}`, "i").test(seg.text);
+  if (!said) return 0;
+  if (kind === "self") return seg.speaker === label ? 2 : 0;
+  // addressed: someone else says the name, and the named speaker talks right before or after
+  if (seg.speaker === label) return 0;
+  const near = segments.slice(Math.max(0, idx - 2), idx + 3).some((s) => s.speaker === label);
+  return near ? 1 : 0;
+}
+
+export function inferSpeakers(raw: z.infer<typeof RawNotes>, segments: Segment[], speakers: Record<string, string>) {
   const labels = new Set(segments.map((s) => s.speaker));
-  const out: Record<string, string> = {};
-  for (const { label, name } of raw.speaker_names) {
-    const n = /^Speaker (\d+)$/.exec(label.trim());
-    const key = n ? String(Number(n[1]) - 1) : null;
-    if (key && labels.has(key) && !speakers[key] && name.trim()) out[key] = name.trim();
+  const votes = new Map<string, Map<string, { score: number; best: { idx: number; kind: "self" | "addressed"; w: number } }>>();
+  const add = (label: string, name: string, idx: number, kind: "self" | "addressed", w: number) => {
+    if (!w || NOT_NAMES.has(name.toLowerCase())) return;
+    const byName = votes.get(label) ?? new Map();
+    const key = [...byName.keys()].find((k) => sameName(k, name)) ?? name;
+    const entry = byName.get(key) ?? { score: 0, best: { idx, kind, w: 0 } };
+    entry.score += w;
+    if (w > entry.best.w) entry.best = { idx, kind, w };
+    byName.set(key, entry);
+    votes.set(label, byName);
+  };
+
+  // Evidence from the model (checked), plus self-introductions found directly in the transcript.
+  for (const g of raw.speaker_names) {
+    const n = /^Speaker (\d+)$/.exec(g.label.trim());
+    const label = n ? String(Number(n[1]) - 1) : null;
+    if (!label || !labels.has(label)) continue;
+    const name = g.name.trim().split(/\s+/)[0];
+    add(label, name, g.idx, g.evidence, evidenceWeight(label, name, g.idx, g.evidence, segments));
+  }
+  for (const seg of segments) {
+    if (!/^\d+$/.test(seg.speaker)) continue;
+    for (const m of seg.text.matchAll(SELF_INTRO)) {
+      // A real introduction is usually echoed nearby ("My name is Evan." "Evan? Nice to meet you, Evan.");
+      // a transcription glitch ("I'm Answer") is not.
+      const around = segments.slice(Math.max(0, seg.idx - 1), seg.idx + 2).map((x) => x.text).join(" ");
+      const echoes = around.match(new RegExp(`\\b${m[1]}\\b`, "g"))?.length ?? 0;
+      add(seg.speaker, m[1], seg.idx, "self", echoes >= 2 ? 3 : 2);
+    }
+  }
+
+  // Each label: the name with the most evidence, if it clearly beats the runner-up.
+  const candidates: { label: string; guess: SpeakerGuess }[] = [];
+  for (const [label, byName] of votes) {
+    if (speakers[label]) continue; // a person already named this speaker
+    const ranked = [...byName.entries()].sort((a, b) => b[1].score - a[1].score);
+    const [top, second] = ranked;
+    if (!top || top[1].score < 2 || (second && second[1].score >= top[1].score)) continue; // ties stay unnamed
+    candidates.push({ label, guess: { name: top[0], score: top[1].score, idx: top[1].best.idx, evidence: top[1].best.kind } });
+  }
+  // A name belongs to one speaker: the one with the strongest evidence keeps it.
+  const out: Record<string, SpeakerGuess> = {};
+  for (const c of candidates.sort((a, b) => b.guess.score - a.guess.score)) {
+    const taken = Object.entries(speakers).some(([l, n]) => l !== c.label && sameName(n, c.guess.name)) ||
+      Object.values(out).some((g) => sameName(g.name, c.guess.name));
+    if (!taken) out[c.label] = c.guess;
   }
   return out;
 }
@@ -370,7 +448,8 @@ export async function writeNotes(segments: Segment[], speakers: Record<string, s
     duration > SINGLE_PASS_MAX_S
       ? await notesForLongMeeting(segments, speakers, meetingDate)
       : await askNotesWithRetry(segments, speakers, meetingDate, duration < 5 * 60 ? "2-3" : "3-6");
-  const newSpeakers = inferredSpeakers(attempt.raw, segments, speakers);
-  const allSpeakers = { ...speakers, ...newSpeakers };
-  return { notes: checkNotes(attempt.raw, segments, allSpeakers, meetingDate), speakers: allSpeakers, model: attempt.model };
+  const guesses = inferSpeakers(attempt.raw, segments, speakers);
+  const allSpeakers = { ...speakers, ...Object.fromEntries(Object.entries(guesses).map(([l, g]) => [l, g.name])) };
+  const notes = { ...checkNotes(attempt.raw, segments, allSpeakers, meetingDate), speaker_guesses: guesses };
+  return { notes, speakers: allSpeakers, model: attempt.model };
 }

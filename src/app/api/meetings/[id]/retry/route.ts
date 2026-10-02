@@ -11,7 +11,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (!meeting) return Response.json({ error: "Not found" }, { status: 404 });
   if (meeting.status === "processing") return Response.json({ error: "Already processing" }, { status: 409 });
 
-  if (meeting.source !== "transcript") await db().from("segments").delete().eq("meeting_id", id);
+  // Re-transcribing renumbers speakers, so old names (AI-guessed or not) no longer apply.
+  if (meeting.source !== "transcript") {
+    await db().from("segments").delete().eq("meeting_id", id);
+    await db().from("meetings").update({ speakers: {} }).eq("id", id);
+  }
+  await db().from("summaries").delete().eq("meeting_id", id);
   await db()
     .from("meetings")
     .update({ status: "processing", stage: meeting.source === "transcript" ? "Writing notes" : "Transcribing", error: null })
