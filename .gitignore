@@ -54,3 +54,7 @@ samples/**/*.ogg
 # raw Fathom exports: private recordings, real names, share links (only NOTES.md is public)
 docs/fathom-research/*
 !docs/fathom-research/NOTES.md
+
+# ground-truth annotations and cached API responses for evaluation (large, re-downloadable)
+samples/ami/annotations/
+samples/cache/

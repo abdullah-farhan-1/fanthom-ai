@@ -7,7 +7,27 @@ export interface GeminiResult {
   model: string;
 }
 
+// Evaluation runs set GEMINI_CACHE_DIR so re-runs reuse identical responses (no API calls, and
+// score changes come only from code changes). Never set in production.
+async function cached(prompt: string, run: () => Promise<GeminiResult>): Promise<GeminiResult> {
+  const dir = process.env.GEMINI_CACHE_DIR;
+  if (!dir) return run();
+  const { createHash } = await import("node:crypto");
+  const { mkdir, readFile, writeFile } = await import("node:fs/promises");
+  const file = `${dir}/${createHash("sha256").update(prompt).digest("hex").slice(0, 32)}.json`;
+  const hit = await readFile(file, "utf8").catch(() => null);
+  if (hit) return JSON.parse(hit);
+  const result = await run();
+  await mkdir(dir, { recursive: true });
+  await writeFile(file, JSON.stringify(result));
+  return result;
+}
+
 export async function generateJson(prompt: string): Promise<GeminiResult> {
+  return cached(prompt, () => callGemini(prompt));
+}
+
+async function callGemini(prompt: string): Promise<GeminiResult> {
   const models = [process.env.GEMINI_MODEL, process.env.GEMINI_FALLBACK_MODEL].filter(Boolean) as string[];
   let lastError = "no Gemini model configured";
   for (const model of models) {

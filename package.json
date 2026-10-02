@@ -10,7 +10,8 @@
     "lint": "eslint",
     "check": "node --env-file=.env.local scripts/check-keys.mts",
     "eval": "tsx --env-file=.env.local scripts/eval.mts",
-    "e2e": "tsx scripts/e2e-upload.mts"
+    "e2e": "tsx scripts/e2e-upload.mts",
+    "eval:speakers": "tsx --env-file=.env.local scripts/eval-speakers.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
