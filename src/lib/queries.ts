@@ -3,6 +3,7 @@ import { db, BUCKET } from "./supabase";
 import { loadSegments } from "./pipeline";
 import type { Meeting, Segment } from "./types";
 import { withNames } from "./format";
+import { seedInfo, type SeedInfo } from "./seed";
 
 export interface MeetingListItem {
   id: string;
@@ -18,6 +19,7 @@ export interface MeetingListItem {
   speakers: string[];
   liked: boolean;
   created_at: string;
+  seed: SeedInfo | null;
 }
 
 export async function listMeetings(): Promise<MeetingListItem[]> {
@@ -41,6 +43,7 @@ export async function listMeetings(): Promise<MeetingListItem[]> {
     speakers: Object.values(m.speakers ?? {}) as string[],
     liked: Boolean(m.liked),
     created_at: m.created_at,
+    seed: seedInfo(m.id),
   }));
 }
 

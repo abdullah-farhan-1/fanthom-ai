@@ -84,7 +84,7 @@ function List({ meetings }: { meetings: MeetingListItem[] }) {
                       <h3 className="font-medium leading-snug transition group-hover:text-brand">{m.title}</h3>
                       <div className="flex shrink-0 items-center gap-2">
                         <ArrowUpRight className="size-4 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
-                        <DeleteMeetingButton
+                        {!m.seed && <DeleteMeetingButton
                           meetingId={m.id}
                           title={m.title}
                           className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 max-sm:opacity-100"
@@ -92,7 +92,7 @@ function List({ meetings }: { meetings: MeetingListItem[] }) {
                             setDeleted((d) => new Set(d).add(m.id));
                             router.refresh(); // refresh the stats strip in the background
                           }}
-                        />
+                        />}
                         <LikeButton
                           meetingId={m.id}
                           initial={m.liked}
@@ -115,6 +115,14 @@ function List({ meetings }: { meetings: MeetingListItem[] }) {
                       {m.status === "failed" && (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-destructive/40 px-2 py-0.5 text-destructive">
                           <XCircle className="size-3" /> Failed · open to retry
+                        </span>
+                      )}
+                      {m.seed && (
+                        <span
+                          title={m.seed.credit}
+                          className="rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2 py-0.5 font-mono text-[11px] text-cyan-200"
+                        >
+                          {`{ ${m.seed.label.toLowerCase()} }`} {m.seed.credit}
                         </span>
                       )}
                       {m.status === "ready" && (

@@ -10,6 +10,7 @@ import { Chapters } from "./chapters";
 import { Timeline } from "./timeline";
 import { LikeButton } from "@/components/like-button";
 import { DeleteMeetingButton } from "@/components/delete-meeting-button";
+import { seedInfo } from "@/lib/seed";
 import { useRouter } from "next/navigation";
 
 export interface SpeakerInfo {
@@ -125,19 +126,31 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
           <span className="text-brand/70">{"{ "}</span>meeting<span className="text-brand/70">{" }"}</span> · {formatDate(meeting.meeting_date)}
           {duration > 0 && ` · ${formatDuration(duration)}`} · {speakerInfo.size} {speakerInfo.size === 1 ? "speaker" : "speakers"} · {meeting.source}
         </p>
+        {seedInfo(meeting.id) && (
+          <a
+            href={seedInfo(meeting.id)!.url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-cyan-300/40 bg-cyan-300/10 px-2.5 py-0.5 font-mono text-[11px] text-cyan-200 hover:bg-cyan-300/20"
+          >
+            {"{ sample }"} {seedInfo(meeting.id)!.credit} ↗
+          </a>
+        )}
         <div className="mt-2 flex items-start justify-between gap-4">
           <h1 className="font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>
           <div className="mt-1 flex shrink-0 gap-2">
             <LikeButton meetingId={meeting.id} initial={Boolean(meeting.liked)} className="size-9" />
-            <DeleteMeetingButton
-              meetingId={meeting.id}
-              title={meeting.title}
-              className="size-9"
-              onDeleted={() => {
-                router.push("/");
-                router.refresh();
-              }}
-            />
+            {!seedInfo(meeting.id) && (
+              <DeleteMeetingButton
+                meetingId={meeting.id}
+                title={meeting.title}
+                className="size-9"
+                onDeleted={() => {
+                  router.push("/");
+                  router.refresh();
+                }}
+              />
+            )}
           </div>
         </div>
       </header>

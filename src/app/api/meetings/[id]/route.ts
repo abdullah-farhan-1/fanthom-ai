@@ -1,4 +1,5 @@
 import { db, BUCKET } from "@/lib/supabase";
+import { seedInfo } from "@/lib/seed";
 
 // Lightweight status for polling while a meeting is processing.
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +39,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // Delete a meeting: its recording in storage, then the row (segments, summaries and highlights cascade).
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (seedInfo(id)) return Response.json({ error: "This sample meeting is kept for reviewers and can't be deleted." }, { status: 403 });
   const { data: meeting } = await db().from("meetings").select("media_path").eq("id", id).maybeSingle();
   if (!meeting) return Response.json({ error: "Not found" }, { status: 404 });
   if (meeting.media_path) {
