@@ -10,17 +10,20 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return Response.json(data);
 }
 
-// Rename speakers {"speakers": {"0": "Maria"}} and/or like {"liked": true}
+// Rename speakers {"speakers": {"0": "Maria"}}, rename the meeting {"title": "..."}, and/or like {"liked": true}
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const body = (await request.json().catch(() => null)) as { speakers?: Record<string, string>; liked?: boolean } | null;
-  if (!body || (!body.speakers && typeof body.liked !== "boolean")) {
-    return Response.json({ error: "speakers or liked is required" }, { status: 400 });
+  const body = (await request.json().catch(() => null)) as { speakers?: Record<string, string>; liked?: boolean; title?: string } | null;
+  if (!body || (!body.speakers && typeof body.liked !== "boolean" && typeof body.title !== "string")) {
+    return Response.json({ error: "speakers, title or liked is required" }, { status: 400 });
   }
+  const title = typeof body.title === "string" ? body.title.replace(/\s+/g, " ").trim().slice(0, 200) : undefined;
+  if (title === "") return Response.json({ error: "The title can't be empty" }, { status: 400 });
   const { data: current } = await db().from("meetings").select("speakers").eq("id", id).maybeSingle();
   if (!current) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const update: { speakers?: Record<string, string>; liked?: boolean } = {};
+  const update: { speakers?: Record<string, string>; liked?: boolean; title?: string } = {};
+  if (title) update.title = title;
   if (body.speakers) {
     const speakers = { ...current.speakers };
     for (const [label, name] of Object.entries(body.speakers)) {
@@ -33,7 +36,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (typeof body.liked === "boolean") update.liked = body.liked;
   const { error } = await db().from("meetings").update(update).eq("id", id);
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  return Response.json({ speakers: update.speakers ?? current.speakers, liked: update.liked });
+  return Response.json({ speakers: update.speakers ?? current.speakers, liked: update.liked, title: update.title });
 }
 
 // Delete a meeting: its recording in storage, then the row (segments, summaries and highlights cascade).

@@ -8,6 +8,7 @@ import { NotesPanel } from "./notes-panel";
 import { SpeakersRow } from "./speakers-row";
 import { Chapters } from "./chapters";
 import { Timeline } from "./timeline";
+import { EditableTitle } from "./editable-title";
 import { LikeButton } from "@/components/like-button";
 import { DeleteMeetingButton } from "@/components/delete-meeting-button";
 import { seedInfo } from "@/lib/seed";
@@ -137,7 +138,7 @@ export function MeetingView({ meeting, segments, mediaUrl, highlights, startAt }
           </a>
         )}
         <div className="mt-2 flex items-start justify-between gap-4">
-          <h1 className="font-display text-2xl font-medium leading-tight tracking-tight sm:text-3xl">{meeting.title}</h1>
+          <EditableTitle meetingId={meeting.id} initial={meeting.title} />
           <div className="mt-1 flex shrink-0 gap-2">
             <LikeButton meetingId={meeting.id} initial={Boolean(meeting.liked)} className="size-9" />
             {!seedInfo(meeting.id) && (
