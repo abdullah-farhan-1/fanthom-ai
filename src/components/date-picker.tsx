@@ -59,6 +59,8 @@ export function DatePicker({ id, value, onChange }: { id?: string; value: string
           onSelect={(d) => d && pick(d)}
           disabled={{ after: today }}
           endMonth={today}
+          // Always 6 rows: a constant height stops the popover re-positioning when switching months.
+          fixedWeeks
           className="[--cell-size:2.1rem]"
         />
         <p className="border-t border-border px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
