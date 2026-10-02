@@ -48,7 +48,7 @@ export function SpeakersRow({
     <div className="border-t border-border px-4 py-3 sm:px-5">
       <div className="mb-2 flex items-center justify-between">
         <BraceLabel>speakers · talk time</BraceLabel>
-        <p className="label-mono !normal-case !tracking-normal">click a name to rename · “cited” = named in the transcript · “guess” = AI suggestion</p>
+        <p className="label-mono !normal-case !tracking-normal max-sm:hidden">click a name to rename · “cited” = named in the transcript · “guess” = AI suggestion</p>
       </div>
       <div className="mb-3 flex h-1 overflow-hidden rounded-full bg-muted">
         {list.map((s) => (
