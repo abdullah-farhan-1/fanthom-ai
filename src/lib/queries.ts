@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db, BUCKET } from "./supabase";
 import { loadSegments } from "./pipeline";
 import type { Meeting, Segment } from "./types";
@@ -55,7 +56,8 @@ export interface MeetingDetail {
   highlights: Highlight[];
 }
 
-export async function getMeeting(id: string): Promise<MeetingDetail | null> {
+// cache(): generateMetadata and the page share one fetch per request instead of querying twice.
+export const getMeeting = cache(async (id: string): Promise<MeetingDetail | null> => {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   const { data: meeting } = await db().from("meetings").select("*").eq("id", id).maybeSingle();
   if (!meeting) return null;
@@ -70,4 +72,4 @@ export async function getMeeting(id: string): Promise<MeetingDetail | null> {
     mediaUrl: media?.data?.signedUrl ?? null,
     highlights: (highlights.data ?? []).map((h) => ({ ...h, start_s: Number(h.start_s), end_s: Number(h.end_s) })),
   };
-}
+});

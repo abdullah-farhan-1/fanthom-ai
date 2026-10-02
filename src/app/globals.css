@@ -85,6 +85,22 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Tailwind v4 resets buttons to the default cursor; everything clickable should look clickable. */
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  [role="checkbox"],
+  [role="slider"],
+  label[for],
+  select,
+  summary {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
   ::selection {
     background: oklch(0.91 0.2 128 / 0.35);
   }
@@ -166,4 +182,27 @@
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: oklch(1 0 0 / 0.14) transparent;
+}
+
+/* Loading states: a shimmering placeholder and a "listening" waveform. */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.skeleton {
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, oklch(1 0 0 / 0.04) 25%, oklch(1 0 0 / 0.09) 50%, oklch(1 0 0 / 0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes listen {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+.listen-bar {
+  transform-origin: center;
+  animation: listen 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .listen-bar { animation: none; }
 }

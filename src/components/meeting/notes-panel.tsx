@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/signal-loader";
 import { formatDate, formatTime, ownerLabel, withNames } from "@/lib/format";
 import { TEMPLATES, type TemplateKey } from "@/lib/templates";
 import type { ActionItem, Summary } from "@/lib/notes";
@@ -89,8 +90,18 @@ function SummaryTab({ meeting, segments, speakers, onSeek }: { meeting: Meeting;
           </Button>
         </div>
       ) : !summary ? (
-        <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Writing {TEMPLATES[template].label} notes…
+        <div className="space-y-4 py-2" role="status" aria-live="polite">
+          <p className="label-mono flex items-center gap-2 !text-brand">
+            <Loader2 className="size-3.5 animate-spin" /> Writing {TEMPLATES[template].label} notes
+          </p>
+          {[0, 1, 2].map((section) => (
+            <div key={section} className="space-y-2">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-5">
