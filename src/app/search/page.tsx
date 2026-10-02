@@ -17,7 +17,8 @@ interface Hit {
 
 function Marked({ text, terms }: { text: string; terms: string[] }) {
   if (!terms.length) return <>{text}</>;
-  const re = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+  // Highlight from the start of a word ("decide" also lights up "decided", but "how" not "show").
+  const re = new RegExp(`\\b(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
   return (
     <>
       {text.split(re).map((part, i) =>
@@ -53,7 +54,8 @@ export default async function SearchPage({ searchParams }: PageProps<"/search">)
       const fallback = await db()
         .from("segments")
         .select("meeting_id, idx, speaker, start_s, text")
-        .ilike("text", `%${q.replace(/[%_]/g, "")}%`)
+        // whole words only (\m \M are Postgres word boundaries), so "how" doesn't match "show"
+        .filter("text", "imatch", `\\m${q.replace(/[^\p{L}\p{N}\s'-]/gu, "")}\\M`)
         .limit(200);
       rows = fallback.data ?? [];
     }
