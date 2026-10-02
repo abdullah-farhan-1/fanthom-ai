@@ -74,10 +74,15 @@ export function UploadMeter({ pct, label }: { pct: number | null; label: string 
           {Array.from({ length: total }, (_, i) => {
             const on = i < lit;
             return (
+              // Every bar always moves with the same rhythm; uploading only fades it from grey to lime,
+              // so the meter reads as one continuous wave instead of bars switching on and jumping.
               <span
                 key={i}
-                className={cn("flex-1 rounded-full transition-colors duration-300", on ? "listen-bar bg-brand" : "bg-muted")}
-                style={{ height: `${35 + Math.abs(Math.sin(i * 1.7)) * 65}%`, animationDelay: `${(i % 7) * 0.1}s` }}
+                className={cn(
+                  "listen-bar flex-1 rounded-full transition-[background-color,box-shadow] duration-500 ease-out",
+                  on ? "bg-brand shadow-[0_0_8px_-1px_var(--brand)]" : "bg-muted-foreground/25",
+                )}
+                style={{ height: `${Math.round(35 + Math.abs(Math.sin(i * 1.7)) * 65)}%`, animationDelay: `${(i * 0.06).toFixed(2)}s` }}
               />
             );
           })}
