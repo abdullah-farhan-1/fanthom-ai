@@ -123,6 +123,7 @@ ${transcriptBlock(segments, speakers)}
 Return JSON: {"sections": [{"heading": "...", "bullets": [{"text": "...", "idx": line number that supports it, or null}]}]}
 Use these section headings in order: ${t.sections.map((s) => `"${s}"`).join(", ")}.
 Bullets are concise (one sentence). If a section has nothing relevant, give it a single bullet "Not discussed." with idx null.
+The meeting is ${Math.max(1, Math.round(((segments.at(-1)?.end_s ?? 0) - (segments[0]?.start_s ?? 0)) / 60))} minutes long: cover all of it, scaling detail with length (about one bullet per 5 minutes in the longest section, at most 12 bullets per section).
 
 ${RULES}`;
   const { text, model } = await generateJson(prompt);
