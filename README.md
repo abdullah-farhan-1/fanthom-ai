@@ -3,7 +3,7 @@
 **A Fathom-style AI meeting notetaker where every AI claim can be checked.** Upload a recording (or paste a transcript) and get a synced transcript, summaries in five templates, action items, decisions, chapters, shareable clips and search across every meeting. Anything the AI says points back to the moment it came from, and anything it can't back up is flagged for a person to review.
 
 - **Live:** https://fanthom-ai-cyan.vercel.app (no sign-in)
-- **Walkthrough video:** _link in the submission form_
+- **Walkthrough video (5 min):** https://drive.google.com/file/d/1Pub8vx8tawDC7vcS6HiM4-z3pynQ0YKj/view
 - **Built for:** the 8x Software Engineer assignment, "Clone: Fanthom AI", in a 24-hour window
 - **AI capture log:** [`.agent-logs/`](.agent-logs/) and [`CAPTURE-TEST.md`](CAPTURE-TEST.md)
 
